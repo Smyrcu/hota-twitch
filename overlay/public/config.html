@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Horn of the Abyss overlay — setup</title>
+    <link rel="stylesheet" href="config.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <h1>Horn of the Abyss overlay</h1>
+
+      <section class="block">
+        <h2>Connection</h2>
+        <p class="status" data-status>Connecting…</p>
+        <p class="hint" data-hint></p>
+        <p class="error" data-error hidden></p>
+      </section>
+
+      <section class="block">
+        <h2>Streamer token</h2>
+        <p>
+          The token binds the plugin in your game to this channel. It is shown once; generating a
+          new one replaces the old.
+        </p>
+        <div class="buttons">
+          <button type="button" class="primary" data-generate>Generate token</button>
+          <button type="button" data-revoke disabled>Revoke</button>
+        </div>
+        <div class="token" data-token hidden>
+          <code data-token-value></code>
+          <button type="button" data-copy>Copy</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>Setup</h2>
+        <ol>
+          <li>Generate the token above and copy it.</li>
+          <li>Paste it into <code>hota-twitch.ini</code>, next to <code>hota-twitch.dll</code> in your game folder.</li>
+          <li>Start Heroes III. This page will show “connected” once the game sends its first state.</li>
+        </ol>
+      </section>
+    </main>
+    <script src="https://extension-files.twitch.tv/helper/v1/twitch-ext.min.js"></script>
+    <script src="config.js"></script>
+  </body>
+</html>
