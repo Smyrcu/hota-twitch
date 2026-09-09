@@ -39,12 +39,16 @@ private:
     std::mutex m_mutex;
     bool m_setUp = false;
     Config m_config;
+    /// Declaration order is destruction order reversed, and that matters here: the poster has
+    /// to go first, because stopping it means signalling the mailbox and joining the worker,
+    /// and the mailbox has to outlive that. Everything the worker or a hook can still reach -
+    /// the mailbox, the reader, the log - is declared above it for the same reason.
     std::unique_ptr<platform::FileLogger> m_log;
     std::unique_ptr<game::HdMod> m_hdMod;
     std::unique_ptr<game::Reader> m_reader;
     std::unique_ptr<game::Hooks> m_hooks;
-    std::unique_ptr<platform::Poster> m_poster;
     SnapshotMailbox m_mailbox;
+    std::unique_ptr<platform::Poster> m_poster;
     /// The worker is started by the first snapshot rather than during setup: setup can run
     /// inside `DllMain`, where starting a thread risks deadlocking on the loader lock, while
     /// a snapshot always arrives on the game thread with no lock held.

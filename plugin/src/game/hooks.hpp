@@ -43,6 +43,10 @@ private:
     StateSnapshot m_building;
     unsigned long m_lastSnapshotTicks = 0;
     bool m_installed = false;
+    /// Set while a snapshot is being taken. All three hooks run on the game thread and one can
+    /// nest inside another - a redraw that opens a screen, say - and the second one would then
+    /// be filling the same snapshot the first is halfway through.
+    bool m_takingSnapshot = false;
 };
 
 } // namespace hota_twitch::game

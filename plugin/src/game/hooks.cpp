@@ -98,6 +98,11 @@ bool Hooks::install()
 
 void Hooks::snapshot()
 {
+    if (m_takingSnapshot)
+    {
+        return;
+    }
+    m_takingSnapshot = true;
     m_lastSnapshotTicks = GetTickCount();
     // The game has no idea what a C++ exception is: whatever goes wrong while reading, the
     // game thread has to come back out of here and carry on.
@@ -114,6 +119,7 @@ void Hooks::snapshot()
     {
         m_log.error("taking a snapshot failed");
     }
+    m_takingSnapshot = false;
 }
 
 void Hooks::snapshotIfDue()
