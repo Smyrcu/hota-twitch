@@ -53,6 +53,14 @@ inline constexpr std::size_t kHotaExtensionRollCount = 0xA4;
 /// Source: spike, 2026-09-07 - the pointer the executive holds while a town window is open.
 inline constexpr std::uintptr_t kTownManagerPointer = 0x69954C;
 
+/// `H3Hero::GetHeroPrimary(int primary)` - the effective value of a primary skill, artifacts
+/// and everything else included. `docs/protocol.md` asks for the numbers the game's own popup
+/// shows, and this is the function the game calls to fill that popup in (H3API's
+/// `H3Hero::ShowPSkillInfo` passes its result straight to the message box). The `stats` array
+/// at hero + 0x476 is not it: NH3API's `GetPrimarySkill` only clamps that raw field.
+/// Source: H3API (~/hota-native-banks/third_party/H3API), `THISCALL_2(INT32, 0x5BE240, this, primary)`.
+inline constexpr std::uintptr_t kHeroGetPrimary = 0x5BE240;
+
 /// Functions the plugin hooks. All three are __thiscall.
 ///
 /// `advManager::UpdateScreen` is the adventure map redraw; NH3API calls it as

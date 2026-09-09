@@ -9,6 +9,8 @@ Sources referred to below:
 
 - **NH3API** — `plugin/external/NH3API`, void_17's database of the SoD 3.2 executable. HotA
   keeps that executable and patches it, so most of the layout still holds.
+- **H3API** — `~/hota-native-banks/third_party/H3API`, RoseKavalier's older database of the
+  same executable. Read-only here, and consulted where NH3API has no answer.
 - **spike** — `docs/research/spike-reader.cs`, findings
   from reading a live HotA 1.8.0 process in September 2026. Where the spike and NH3API
   disagree, the spike watched the running game and wins.
@@ -34,14 +36,14 @@ the offset.
 | `game::townPool` | `game + 0x21610` | `exe_vector<town>`, stride `0x168` |
 | `advManager::advWindow` | `advManager + 0x44` | `TAdventureMapWindow*` |
 | `playerData` fields | `color +0x00`, `numHeroes +0x01`, `currHero +0x04`, `heroes[8] +0x08`, `numTowns +0x3E`, `towns[72] +0x40`, `cName[21] +0xCC`, `isLocal +0xE1`, `isHuman +0xE2` | see "Finding the streamer" |
-| `hero` fields | `mana +0x18`, `id +0x1A`, `playerOwner +0x22`, `name[13] +0x23`, `hero_class +0x30`, `portrait +0x34`, `maxMobility +0x49`, `currMobility +0x4D`, `experience +0x51`, `Level +0x55`, `heroArmy +0x91`, `SSLevel[28] +0xC9`, `SSOrder[28] +0xE5`, `equipped[19] +0x12D`, `backpack[64] +0x1D4`, `backpack_count +0x3D4`, `stats[4] +0x476`; stride `0x492` | all confirmed against the spike |
+| `hero` fields | `mana +0x18`, `id +0x1A`, `playerOwner +0x22`, `name[13] +0x23`, `hero_class +0x30`, `portrait +0x34`, `maxMobility +0x49`, `currMobility +0x4D`, `experience +0x51`, `Level +0x55`, `heroArmy +0x91`, `SSLevel[28] +0xC9`, `SSOrder[28] +0xE5`, `equipped[19] +0x12D`, `backpack[64] +0x1D4`, `backpack_count +0x3D4`, `stats[4] +0x476`; stride `0x492` | all confirmed against the spike. `stats` is the raw field and is **not** what the plugin sends - see "Primary skills" |
 | `town` fields | `id +0x00`, `playerOwner +0x01`, `townType +0x04`, `garrisonHero +0x0C`, `occupyingHero +0x10`, `mageLevel +0x14`, `townSpells[5][6] +0x44`, `maxTownSpellAvailable[5] +0xBC`, `cName +0xC4`, `town_army +0xE0`, `full_building_mask +0x158` | see "Towns" |
 | `armyGroup` | `type[7] +0x00`, `amount[7] +0x1C` | used for both hero armies and town garrisons |
 | `hero::GetMaxMana()` | `knowledge x 10 x GetIntelligenceFactor()` | `GetIntelligenceFactor` is `THISCALL 0x4E4B20`, so HotA's own 20/35/50% Intelligence applies rather than SoD's 25/50/100%. The spike confirmed the result on a live hero: knowledge 23 with Advanced Intelligence gave 310. |
 
-`backpack_count` deserves a note. The old H3API put it at `+0x3D1`; the spike measured `+0x3D4`
-on a live game, which is also what `0x1D4 + 64 * 8` works out to. NH3API v1.2 already says
-`+0x3D4`, so the two agree and the plugin inherits the correct offset.
+`backpack_count` deserves a note. The older H3API put it at `+0x3D1`; the spike measured
+`+0x3D4` on a live game, which is also what `0x1D4 + 64 * 8` works out to. NH3API v1.2 already
+says `+0x3D4`, so the two agree and the plugin inherits the correct offset.
 
 ## Constants the plugin owns
 
@@ -104,6 +106,17 @@ Because SoD uses this field for something else, the value is not trusted blindly
 four-byte aligned, `VirtualQuery` has to agree that all `0xD0` bytes are committed and readable,
 and every slot state has to be in `0..15`; a single value outside that range means the record is
 not a HotA extension record and the town simply reports no research.
+
+### Effective primary skills - `H3Hero::GetHeroPrimary`, `THISCALL 0x5BE240`
+
+`docs/protocol.md` asks for the effective attack, defence, power and knowledge: the numbers the
+game's own popup shows, artifacts included. `stats` at `hero + 0x476` is the raw field, and
+NH3API's `GetPrimarySkill` only clamps that, so neither of them is the answer.
+
+`GetHeroPrimary(int primary)` is the function the game calls to fill that popup in - H3API's
+`H3Hero::ShowPSkillInfo` hands its result straight to the message box - so the plugin calls it
+too, once per skill per hero, on the game thread where calling into the game is safe. The
+address comes from H3API; NH3API does not wrap this one.
 
 ## Finding heroes
 

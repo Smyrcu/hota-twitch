@@ -63,6 +63,7 @@ jobs:
         env:
           R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
           R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_PREFIX: ${{ secrets.R2_PREFIX }}
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
@@ -71,6 +72,12 @@ jobs:
             echo "::notice::R2 secrets are not set, the download files are only on the release"
             exit 0
           fi
-          aws s3 cp dist/ "s3://${R2_BUCKET}/h3/twitch/${GITHUB_REF_NAME}/" \
-            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
-            --recursive --exclude '*' --include '*.zip'
+          endpoint="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          for versioned in dist/*.zip; do
+            name=$(basename "$versioned")
+            # hota-twitch-plugin-v1.2.3.zip -> hota-twitch-plugin.zip, so that the download
+            # page can link one URL that never changes.
+            stable="${name%-${GITHUB_REF_NAME}.zip}.zip"
+            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/${name}" --endpoint-url "$endpoint"
+            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/latest/${stable}" --endpoint-url "$endpoint"
+          done

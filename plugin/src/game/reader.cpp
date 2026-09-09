@@ -50,6 +50,13 @@ bool describesHero(const hero& record, int heroId, int owner)
            !untilNul(record.name.data(), record.name.size()).empty();
 }
 
+/// The value the game itself would print in the hero popup: the raw `stats` field plus every
+/// artifact and bonus on top of it.
+std::int32_t effectivePrimary(const hero& source, std::int32_t primary)
+{
+    return THISCALL_2(std::int32_t, layout::kHeroGetPrimary, &source, primary);
+}
+
 std::int32_t readListTop(const void* window, std::size_t offset)
 {
     const std::int32_t top = readAt<std::int32_t>(window, offset);
@@ -200,7 +207,7 @@ void Reader::readHero(const hero& source, HeroSnapshot& out) const
     out.moveMax = source.maxMobility;
     for (std::size_t index = 0; index < out.primary.size(); ++index)
     {
-        out.primary[index] = source.stats[index];
+        out.primary[index] = effectivePrimary(source, static_cast<std::int32_t>(index));
     }
 
     collectSkills(source.SSLevel, source.SSOrder, out.skills);
