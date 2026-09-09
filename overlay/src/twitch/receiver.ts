@@ -11,47 +11,58 @@ export type ProblemSink = (reason: string) => void;
  * and dropped: the previously applied state stays on screen.
  */
 export class BroadcastReceiver {
-    private latencyMs = 0;
-    private timers = new Set<ReturnType<typeof setTimeout>>();
+  private latencyMs = 0;
+  private applied = 0;
+  private timers = new Set<ReturnType<typeof setTimeout>>();
 
-    constructor(
-        private readonly onState: StateSink,
-        private readonly onProblem: ProblemSink = () => {},
-    ) {}
+  constructor(
+    private readonly onState: StateSink,
+    private readonly onProblem: ProblemSink = () => {},
+  ) {}
 
-    setLatencySeconds(seconds: number): void {
-        this.latencyMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0;
+  setLatencySeconds(seconds: number): void {
+    this.latencyMs = Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : 0;
+  }
+
+  async handle(message: string): Promise<void> {
+    const json = await decodeBroadcast(message);
+    if (json === null) {
+      this.onProblem('broadcast: cannot decompress');
+      return;
     }
-
-    async handle(message: string): Promise<void> {
-        const json = await decodeBroadcast(message);
-        if (json === null) {
-            this.onProblem('broadcast: cannot decompress');
-            return;
-        }
-        const result = decodeJson(json);
-        if (!result.ok) {
-            this.onProblem(result.reason);
-            return;
-        }
-        this.schedule(result.state);
+    const result = decodeJson(json);
+    if (!result.ok) {
+      this.onProblem(result.reason);
+      return;
     }
+    this.schedule(result.state);
+  }
 
-    /** Drops states that have not been applied yet, for when the viewer leaves the page. */
-    cancel(): void {
-        for (const timer of this.timers) clearTimeout(timer);
-        this.timers.clear();
-    }
+  /** Drops states that have not been applied yet, for when the viewer leaves the page. */
+  cancel(): void {
+    for (const timer of this.timers) clearTimeout(timer);
+    this.timers.clear();
+  }
 
-    private schedule(state: GameState): void {
-        if (this.latencyMs <= 0) {
-            this.onState(state);
-            return;
-        }
-        const timer = setTimeout(() => {
-            this.timers.delete(timer);
-            this.onState(state);
-        }, this.latencyMs);
-        this.timers.add(timer);
+  private schedule(state: GameState): void {
+    if (this.latencyMs <= 0) {
+      this.apply(state);
+      return;
     }
+    const timer = setTimeout(() => {
+      this.timers.delete(timer);
+      this.apply(state);
+    }, this.latencyMs);
+    this.timers.add(timer);
+  }
+
+  /**
+     * Never steps backwards. A latency change re-times the messages still in flight, and two
+     * decodes can finish out of order, so an older document must not overwrite a newer one.
+     */
+  private apply(state: GameState): void {
+    if (state.ts <= this.applied) return;
+    this.applied = state.ts;
+    this.onState(state);
+  }
 }
