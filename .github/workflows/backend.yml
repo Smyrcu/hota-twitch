@@ -26,9 +26,12 @@ env:
   SSH_OPTIONS: -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/id_deploy
 
 jobs:
-  build:
-    name: build and test
+  build-and-deploy:
+    name: build, test and deploy
     runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
 
@@ -58,29 +61,8 @@ jobs:
             -p:PublishSingleFile=true \
             --output "$GITHUB_WORKSPACE/publish"
 
-      - name: Keep the tested build for the deploy job
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-${{ github.sha }}
-          path: publish/
-          retention-days: 7
-
-  deploy:
-    name: deploy
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-backend
-      cancel-in-progress: false
-    steps:
-      - name: Take the build that passed the tests
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-${{ github.sha }}
-          path: publish
-
       - name: Set up SSH
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
@@ -92,6 +74,7 @@ jobs:
           chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
 
       - name: Upload the release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -102,6 +85,7 @@ jobs:
                 "set -eu; rm -rf '$release'; mkdir -p '$release'; tar -xzf - -C '$release'; chmod +x '$release/HotaTwitch.Api'"
 
       - name: Switch current and restart the service
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -110,9 +94,10 @@ jobs:
           previous=$(ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" "readlink -f '$CURRENT_LINK' 2>/dev/null || true")
           echo "PREVIOUS_RELEASE=$previous" >> "$GITHUB_ENV"
           ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" \
-            "set -eu; ln -sfnT '$release' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
+            "set -eu; if [ -d '$CURRENT_LINK' ] && [ ! -L '$CURRENT_LINK' ]; then rmdir '$CURRENT_LINK'; fi; ln -sfnT '$release' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
 
       - name: Wait for the service to answer
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         id: health
         run: |
           deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS))
@@ -127,7 +112,7 @@ jobs:
           exit 1
 
       - name: Put the previous release back
-        if: failure() && steps.health.outcome == 'failure' && env.PREVIOUS_RELEASE != ''
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && failure() && steps.health.outcome == 'failure' && env.PREVIOUS_RELEASE != ''
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -137,6 +122,7 @@ jobs:
             "set -eu; ln -sfnT '$PREVIOUS_RELEASE' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
 
       - name: Drop the oldest releases
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
