@@ -1,0 +1,3 @@
+[submodule "plugin/external/NH3API"]
+	path = plugin/external/NH3API
+	url = https://github.com/void2012/NH3API
