@@ -1,0 +1,48 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+}
+
+/* The layer never takes the pointer; only the zones inside it do, so clicks reach the player. */
+#overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#overlay.calibration {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+.zone {
+  position: absolute;
+  pointer-events: auto;
+}
+
+.zone.debug {
+  outline: 1px solid rgba(255, 231, 148, 0.85);
+  background: rgba(255, 231, 148, 0.12);
+}
+
+.card {
+  position: absolute;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.status {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  padding: 4px 8px;
+  font: 12px ui-monospace, monospace;
+  color: #ffe794;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 231, 148, 0.4);
+  pointer-events: none;
+}
