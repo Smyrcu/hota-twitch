@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# The development loader is not part of what a streamer installs; it is built alongside the DLL
+# so that a change can be tried in the running game without touching the game folder.
+option(HOTA_TWITCH_BUILD_INJECTOR "Build the development loader under dev/inject" ON)
+
 # Code that knows nothing about the game or about Windows: it builds for the DLL and for the
 # native test runner alike.
 add_library(hota_twitch_core STATIC
@@ -68,6 +72,9 @@ if(WIN32)
             -Wl,--gc-sections
             $<$<NOT:$<CONFIG:Debug>>:-s>
         )
+    endif()
+    if(HOTA_TWITCH_BUILD_INJECTOR)
+        add_subdirectory(dev/inject)
     endif()
 else()
     enable_testing()

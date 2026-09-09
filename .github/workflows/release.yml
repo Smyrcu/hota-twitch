@@ -1,0 +1,76 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install the cross toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-mingw-w64-i686 ninja-build
+          # The win32 threading variant has no std::thread; the plugin needs the posix one.
+          sudo update-alternatives --set i686-w64-mingw32-gcc /usr/bin/i686-w64-mingw32-gcc-posix
+          sudo update-alternatives --set i686-w64-mingw32-g++ /usr/bin/i686-w64-mingw32-g++-posix
+
+      - name: Test the parts that build natively
+        run: |
+          cmake -S plugin -B plugin/build-native -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build plugin/build-native
+          ctest --test-dir plugin/build-native --output-on-failure
+
+      - name: Build the plugin
+        run: |
+          cmake -S plugin -B plugin/build-win -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/plugin/cmake/mingw-i686.cmake" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DHOTA_TWITCH_BUILD_INJECTOR=OFF
+          cmake --build plugin/build-win
+          file plugin/build-win/hota-twitch.dll
+
+      - name: Pack the plugin
+        run: |
+          mkdir -p dist/plugin
+          cp plugin/build-win/hota-twitch.dll plugin/hota-twitch.ini plugin/INSTALL.md dist/plugin/
+          (cd dist/plugin && zip -r ../hota-twitch-plugin-${GITHUB_REF_NAME}.zip .)
+
+      - name: Pack the overlay
+        run: |
+          if [ ! -f overlay/package.json ]; then
+            echo "::notice::overlay/package.json is missing, the overlay zip is not built"
+            exit 0
+          fi
+          (cd overlay && npm ci && npm run package)
+          cp overlay/dist/overlay.zip dist/hota-twitch-overlay-${GITHUB_REF_NAME}.zip
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${GITHUB_REF_NAME}" --generate-notes dist/*.zip
+
+      - name: Upload to Cloudflare R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          if [ -z "$R2_BUCKET" ] || [ -z "$R2_ACCOUNT_ID" ] || [ -z "$AWS_ACCESS_KEY_ID" ]; then
+            echo "::notice::R2 secrets are not set, the download files are only on the release"
+            exit 0
+          fi
+          aws s3 cp dist/ "s3://${R2_BUCKET}/h3/twitch/${GITHUB_REF_NAME}/" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --recursive --exclude '*' --include '*.zip'

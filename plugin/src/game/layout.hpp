@@ -53,6 +53,17 @@ inline constexpr std::size_t kHotaExtensionRollCount = 0xA4;
 /// Source: spike, 2026-09-07 - the pointer the executive holds while a town window is open.
 inline constexpr std::uintptr_t kTownManagerPointer = 0x69954C;
 
+/// Functions the plugin hooks. All three are __thiscall.
+///
+/// `advManager::UpdateScreen` is the adventure map redraw; NH3API calls it as
+/// THISCALL_3(void, 0x40F1D0, this, false, false). `executive::AddManager` and
+/// `executive::RemoveManager` are how the game pushes and pops the manager that owns the
+/// screen, so they are exactly the screen transitions.
+/// Source: NH3API (adventure.hpp, base_manager.hpp).
+inline constexpr std::uintptr_t kAdvManagerUpdateScreen = 0x40F1D0;
+inline constexpr std::uintptr_t kExecutiveAddManager = 0x4B0880;
+inline constexpr std::uintptr_t kExecutiveRemoveManager = 0x4B0950;
+
 /// Smallest address the plugin will follow as a pointer. Below this lies the null page and
 /// the small integers that leftover memory is full of.
 inline constexpr std::uintptr_t kLowestValidPointer = 0x10000;

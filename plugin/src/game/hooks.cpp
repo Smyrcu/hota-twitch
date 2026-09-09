@@ -1,5 +1,7 @@
 #include "hooks.hpp"
 
+#include "game/layout.hpp"
+
 #include <nh3api/core.hpp>
 
 #include <windows.h>
@@ -16,15 +18,6 @@ constexpr unsigned long kMinimumIntervalMs = 300;
 /// The name the plugin registers with the HD Mod patcher. It shows up in the patcher's own
 /// listings, so it says who the hooks belong to.
 constexpr const char* kPatcherOwner = "HD.Plugin.hota-twitch";
-
-/// Adventure screen update, `advManager::UpdateScreen`. Signature: void __thiscall(this, bool,
-/// bool); NH3API calls it as THISCALL_3(void, 0x40F1D0, this, false, false).
-constexpr std::uintptr_t kAdvManagerUpdateScreen = 0x40F1D0;
-
-/// `executive::AddManager` and `executive::RemoveManager`: the game pushes and pops the
-/// manager that owns the screen through these, so they are exactly the screen transitions.
-constexpr std::uintptr_t kExecutiveAddManager = 0x4B0880;
-constexpr std::uintptr_t kExecutiveRemoveManager = 0x4B0950;
 
 /// The hooks are C function pointers, so the instance they belong to has to be reachable
 /// without an argument. Exactly one Hooks object exists for the life of the process.
@@ -93,10 +86,10 @@ bool Hooks::install()
     }
 
     g_hooks = this;
-    instance->WriteHiHook(kAdvManagerUpdateScreen, SPLICE_, EXTENDED_, THISCALL_,
+    instance->WriteHiHook(layout::kAdvManagerUpdateScreen, SPLICE_, EXTENDED_, THISCALL_,
                           &onAdventureUpdate);
-    instance->WriteHiHook(kExecutiveAddManager, SPLICE_, EXTENDED_, THISCALL_, &onAddManager);
-    instance->WriteHiHook(kExecutiveRemoveManager, SPLICE_, EXTENDED_, THISCALL_,
+    instance->WriteHiHook(layout::kExecutiveAddManager, SPLICE_, EXTENDED_, THISCALL_, &onAddManager);
+    instance->WriteHiHook(layout::kExecutiveRemoveManager, SPLICE_, EXTENDED_, THISCALL_,
                           &onRemoveManager);
     m_installed = true;
     m_log.info("hooks installed on the adventure screen update and the manager list");
