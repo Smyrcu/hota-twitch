@@ -1,0 +1,14 @@
+# Cross-compile the plugin for Win32/x86 with mingw-w64 (i686).
+# Fedora: mingw32-gcc-c++. Debian/Ubuntu: g++-mingw-w64-i686-posix.
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86)
+
+set(TOOLCHAIN_PREFIX i686-w64-mingw32)
+set(CMAKE_C_COMPILER   ${TOOLCHAIN_PREFIX}-gcc)
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}-g++)
+set(CMAKE_RC_COMPILER  ${TOOLCHAIN_PREFIX}-windres)
+
+set(CMAKE_FIND_ROOT_PATH /usr/${TOOLCHAIN_PREFIX}/sys-root/mingw)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
