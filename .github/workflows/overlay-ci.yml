@@ -1,0 +1,30 @@
+name: overlay
+
+on:
+  push:
+    branches: [main]
+    paths: ['overlay/**', '.github/workflows/overlay-ci.yml']
+  pull_request:
+    paths: ['overlay/**', '.github/workflows/overlay-ci.yml']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: overlay
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: overlay/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: overlay-bundle
+          path: overlay/package/hota-twitch-overlay.zip

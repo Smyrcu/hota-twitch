@@ -1,0 +1,124 @@
+:root {
+  color-scheme: dark;
+  --ink: #f2e6cd;
+  --muted: #b6a684;
+  --gold: #ffe794;
+  --edge: #6b4f2a;
+}
+
+body {
+  margin: 0;
+  padding: 16px;
+  color: var(--ink);
+  background-color: #241a10;
+  background-image: url("assets/ui/leather.png");
+  background-repeat: repeat;
+  font: 14px/1.5 system-ui, sans-serif;
+}
+
+.panel {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  background: rgba(20, 14, 8, 0.82);
+  border: 2px solid var(--edge);
+}
+
+.panel.compact {
+  padding: 14px 18px;
+}
+
+h1 {
+  margin: 0 0 16px;
+  font-size: 20px;
+  color: var(--gold);
+}
+
+h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--gold);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.block {
+  margin-bottom: 22px;
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+.status {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.status.connected {
+  color: #9bd77a;
+}
+
+.hint,
+.error {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.error {
+  color: #e08a72;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+button {
+  padding: 7px 14px;
+  color: var(--ink);
+  background: #3a2a17;
+  border: 1px solid var(--edge);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #4a361d;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  color: #241a10;
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.token {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px dashed var(--edge);
+}
+
+code {
+  font: 13px ui-monospace, monospace;
+  color: var(--gold);
+  overflow-wrap: anywhere;
+}
+
+ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+li {
+  margin-bottom: 6px;
+}
