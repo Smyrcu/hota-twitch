@@ -25,6 +25,7 @@ jobs:
       - run: npm test
       - run: npm run package
       - uses: actions/upload-artifact@v4
+        continue-on-error: true
         with:
           name: overlay-bundle
           path: overlay/package/hota-twitch-overlay.zip
