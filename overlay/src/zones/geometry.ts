@@ -1,15 +1,15 @@
 import type { Display } from '../state/protocol.js';
 
 export interface Rect {
-    readonly x: number;
-    readonly y: number;
-    readonly width: number;
-    readonly height: number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 export interface Size {
-    readonly width: number;
-    readonly height: number;
+  readonly width: number;
+  readonly height: number;
 }
 
 /**
@@ -22,12 +22,12 @@ export interface Size {
  * screenshot (2560x1440, scale 1) and is the calibration open point of the design spec.
  */
 export interface ListGeometry {
-    readonly right: number;
-    readonly top: number;
-    readonly width: number;
-    readonly height: number;
-    readonly pitch: number;
-    readonly rows: number;
+  readonly right: number;
+  readonly top: number;
+  readonly width: number;
+  readonly height: number;
+  readonly pitch: number;
+  readonly rows: number;
 }
 
 export const HERO_LIST: ListGeometry = { right: 191, top: 198, width: 64, height: 32, pitch: 32, rows: 8 };
@@ -35,18 +35,18 @@ export const TOWN_LIST: ListGeometry = { right: 54, top: 214, width: 48, height:
 
 /** Maps the game frame onto the player with a contain fit, letterboxing the shorter axis. */
 export interface Fit {
-    readonly scale: number;
-    readonly offsetX: number;
-    readonly offsetY: number;
+  readonly scale: number;
+  readonly offsetX: number;
+  readonly offsetY: number;
 }
 
 export function containFit(game: Size, player: Size): Fit {
-    const scale = Math.min(player.width / game.width, player.height / game.height);
-    return {
-        scale,
-        offsetX: (player.width - game.width * scale) / 2,
-        offsetY: (player.height - game.height * scale) / 2,
-    };
+  const scale = Math.min(player.width / game.width, player.height / game.height);
+  return {
+    scale,
+    offsetX: (player.width - game.width * scale) / 2,
+    offsetY: (player.height - game.height * scale) / 2,
+  };
 }
 
 /**
@@ -54,26 +54,26 @@ export function containFit(game: Size, player: Size): Fit {
  * widget, so this is the measured row count unless the window is too short to hold it.
  */
 export function visibleRows(list: ListGeometry, logicalHeight: number): number {
-    const fits = Math.floor((logicalHeight - list.top) / list.pitch);
-    return Math.max(0, Math.min(list.rows, fits));
+  const fits = Math.floor((logicalHeight - list.top) / list.pitch);
+  return Math.max(0, Math.min(list.rows, fits));
 }
 
 /** The entry's rectangle in game pixels. */
 export function rowRectInGame(list: ListGeometry, display: Display, row: number): Rect {
-    const scale = display.uiScale;
-    return {
-        x: display.width - list.right * scale,
-        y: (list.top + list.pitch * row) * scale,
-        width: list.width * scale,
-        height: list.height * scale,
-    };
+  const scale = display.uiScale;
+  return {
+    x: display.width - list.right * scale,
+    y: (list.top + list.pitch * row) * scale,
+    width: list.width * scale,
+    height: list.height * scale,
+  };
 }
 
 export function mapRect(rect: Rect, fit: Fit): Rect {
-    return {
-        x: fit.offsetX + rect.x * fit.scale,
-        y: fit.offsetY + rect.y * fit.scale,
-        width: rect.width * fit.scale,
-        height: rect.height * fit.scale,
-    };
+  return {
+    x: fit.offsetX + rect.x * fit.scale,
+    y: fit.offsetY + rect.y * fit.scale,
+    width: rect.width * fit.scale,
+    height: rect.height * fit.scale,
+  };
 }

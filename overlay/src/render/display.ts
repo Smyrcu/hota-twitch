@@ -8,10 +8,10 @@ import type { TextAlign } from './text/layout.js';
 export type PanelKind = 'hero' | 'town' | 'expansion';
 
 export type DrawOp =
-    | { readonly kind: 'panel'; readonly panel: PanelKind; readonly x: number; readonly y: number; readonly width: number; readonly height: number }
-    | { readonly kind: 'sprite'; readonly src: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number }
-    | { readonly kind: 'fill'; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly colour: string }
-    | {
+  | { readonly kind: 'panel'; readonly panel: PanelKind; readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+  | { readonly kind: 'sprite'; readonly src: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number }
+  | { readonly kind: 'fill'; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly colour: string }
+  | {
           readonly kind: 'text';
           readonly text: string;
           readonly font: FontId;
@@ -27,25 +27,25 @@ export type DrawOp =
  * executes it on a canvas. Keeping the two apart makes the layout testable without a canvas.
  */
 export interface Card {
-    readonly width: number;
-    readonly height: number;
-    readonly ops: readonly DrawOp[];
+  readonly width: number;
+  readonly height: number;
+  readonly ops: readonly DrawOp[];
 }
 
 export function sprite(src: string, x: number, y: number, width: number, height: number): DrawOp {
-    return { kind: 'sprite', src, x, y, width, height };
+  return { kind: 'sprite', src, x, y, width, height };
 }
 
 export function text(
-    value: string,
-    font: FontId,
-    colour: TextColour,
-    x: number,
-    y: number,
-    align: TextAlign = 'left',
-    maxWidth?: number,
+  value: string,
+  font: FontId,
+  colour: TextColour,
+  x: number,
+  y: number,
+  align: TextAlign = 'left',
+  maxWidth?: number,
 ): DrawOp {
-    return maxWidth === undefined
-        ? { kind: 'text', text: value, font, colour, x, y, align }
-        : { kind: 'text', text: value, font, colour, x, y, align, maxWidth };
+  return maxWidth === undefined
+    ? { kind: 'text', text: value, font, colour, x, y, align }
+    : { kind: 'text', text: value, font, colour, x, y, align, maxWidth };
 }
