@@ -16,7 +16,7 @@ town names. Everything else is looked up in the overlay.
   "screen": "adventure",          // "none" | "adventure" | "town" | "combat" | "other"
   "date": { "day": 1, "week": 3, "month": 1 },
   "display": { "width": 2560, "height": 1440, "uiScale": 1 },
-  "player": {
+  "player": {                     // null when screen is "none"
     "id": 0,                      // player colour index 0..7
     "name": "HaveFunMate",
     "currentHero": 184,           // hero id or -1
@@ -28,7 +28,8 @@ town names. Everything else is looked up in the overlay.
 }
 ```
 
-`screen` is `none` when no game is loaded. The overlay shows cards only on `adventure`.
+`screen` is `none` when no game is loaded; then `player` is `null` and `heroes` / `towns` are empty
+arrays. The overlay shows cards only on `adventure`.
 `display` describes the game window and the HD Mod interface scale (1 = pixel-exact 800x600
 widgets, 2 = doubled, fractional values allowed). When the producer cannot read the scale it
 omits `uiScale` and the consumer assumes 1.
@@ -45,9 +46,9 @@ omits `uiScale` and the consumer assumes 1.
   "exp": 132486,
   "mana": 27, "manaMax": 390,
   "move": 1500, "moveMax": 1500,
-  "primary": [26, 25, 25, 26],    // attack, defense, power, knowledge (with artifacts)
+  "primary": [26, 25, 25, 26],    // attack, defense, power, knowledge — effective values as the game's popup shows them (artifacts included)
   "skills": [[7, 3], [19, 2]],    // [skill id, level 1..3], in the hero's slot order
-  "equipped": [[0, 12], [18, 143]],  // [body slot 0..18, artifact id]; slot 13 (catapult) omitted
+  "equipped": [[0, 12], [18, 143]],  // [body slot, artifact id]; slots 0..12 and 18 only — 13..17 (war machines, spellbook) omitted
   "backpack": [5, 7, 122],        // artifact ids in backpack order
   "army": [[0, 13, 3], [1, 110, 15]] // [slot 0..6, creature id, count]; empty slots omitted
 }
@@ -63,7 +64,7 @@ omits `uiScale` and the consumer assumes 1.
   "fort": 3,                      // 0 none, 1 fort, 2 citadel, 3 castle
   "hall": 3,                      // 0 village hall, 1 town hall, 2 city hall, 3 capitol
   "guild": 5,                     // mage guild level 0..5
-  "spells": [[15, 27], [], [], [38, 9], [36]],   // per guild level 1..5: spell ids, only built levels, only real slots
+  "spells": [[15, 27], [], [], [38, 9], [36]],   // exactly five arrays, guild levels 1..5; an unbuilt level is []; only real slots (Library included)
   "research": { "level": 4, "slot": 1, "spell": 55, "rolls": 2 },  // null when no research is open
   "garrison": [[0, 13, 1]],       // army in the town's own garrison slots (see note)
   "garrisonHero": { /* Hero */ }, // null when empty
