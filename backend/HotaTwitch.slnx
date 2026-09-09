@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/HotaTwitch.Api/HotaTwitch.Api.csproj" />
+    <Project Path="src/HotaTwitch.Application/HotaTwitch.Application.csproj" />
+    <Project Path="src/HotaTwitch.Domain/HotaTwitch.Domain.csproj" />
+    <Project Path="src/HotaTwitch.Infrastructure/HotaTwitch.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/HotaTwitch.Api.Tests/HotaTwitch.Api.Tests.csproj" />
+    <Project Path="tests/HotaTwitch.Application.Tests/HotaTwitch.Application.Tests.csproj" />
+    <Project Path="tests/HotaTwitch.Domain.Tests/HotaTwitch.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
