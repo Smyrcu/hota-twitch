@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>HotaTwitch.Api</RootNamespace>
+    <UserSecretsId>hota-twitch-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../HotaTwitch.Infrastructure/HotaTwitch.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HotaTwitch.Api.Tests" />
+  </ItemGroup>
+
+</Project>

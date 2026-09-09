@@ -6,6 +6,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="HotaTwitch.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
