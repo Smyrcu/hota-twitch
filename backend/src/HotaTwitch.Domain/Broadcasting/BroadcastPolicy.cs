@@ -1,4 +1,3 @@
-
 namespace HotaTwitch.Domain.Broadcasting;
 
 /// <summary>The limits from <c>docs/protocol.md</c> sections 2 and 3.</summary>

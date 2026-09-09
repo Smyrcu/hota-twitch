@@ -25,7 +25,6 @@ public static class InfrastructureServiceCollectionExtensions
                 options.ClientId = configuration["TWITCH_CLIENT_ID"] ?? string.Empty;
                 options.ExtensionSecret = configuration["TWITCH_EXTENSION_SECRET"] ?? string.Empty;
                 options.OwnerUserId = configuration["TWITCH_OWNER_USER_ID"] ?? string.Empty;
-                options.UseFakePubSub = configuration.GetValue("TWITCH_FAKE_PUBSUB", defaultValue: false);
             })
             .ValidateDataAnnotations()
             .ValidateOnStart();
@@ -55,7 +54,11 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         services.AddHttpClient(TwitchPubSubPublisher.HttpClientName, (provider, client) =>
-            client.BaseAddress = provider.GetRequiredService<IOptions<TwitchOptions>>().Value.HelixBaseAddress);
+        {
+            var settings = provider.GetRequiredService<IOptions<TwitchOptions>>().Value;
+            client.BaseAddress = settings.HelixBaseAddress;
+            client.Timeout = settings.HelixTimeout;
+        });
         services.AddSingleton<IPubSubPublisher, TwitchPubSubPublisher>();
     }
 }

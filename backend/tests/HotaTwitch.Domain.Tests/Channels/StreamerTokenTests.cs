@@ -9,6 +9,9 @@ namespace HotaTwitch.Domain.Tests.Channels;
 
 public sealed class StreamerTokenTests
 {
+    /// <summary>A well-formed token: the prefix and exactly 32 zero bytes in base64url.</summary>
+    private static readonly string KnownToken = StreamerToken.Prefix + Base64Url.EncodeToString(new byte[32]);
+
     [Fact]
     public void Generate_Always_ProducesPrefixedBase64UrlOf32Bytes()
     {
@@ -27,9 +30,9 @@ public sealed class StreamerTokenTests
     [Fact]
     public void Hash_KnownToken_IsSha256HexOfTheTokenText()
     {
-        StreamerToken.TryParse("hts_AAAA", out var token).Should().BeTrue();
+        StreamerToken.TryParse(KnownToken, out var token).Should().BeTrue();
 
-        var expected = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes("hts_AAAA")));
+        var expected = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(KnownToken)));
         token.Hash().Value.Should().Be(expected);
     }
 
@@ -44,9 +47,9 @@ public sealed class StreamerTokenTests
     [Fact]
     public void Hint_KnownToken_ShowsPrefixAndTwoCharacters()
     {
-        StreamerToken.TryParse("hts_abcdef", out var token).Should().BeTrue();
+        StreamerToken.TryParse(KnownToken, out var token).Should().BeTrue();
 
-        token.Hint().Should().Be("hts_ab…");
+        token.Hint().Should().Be("hts_AA…");
     }
 
     [Theory]
@@ -57,6 +60,17 @@ public sealed class StreamerTokenTests
     [InlineData("hts_not+base64url")]
     public void TryParse_MalformedText_ReturnsFalse(string? value) =>
         StreamerToken.TryParse(value, out _).Should().BeFalse();
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(1)]
+    public void TryParse_BodyOfTheWrongLength_ReturnsFalse(int difference)
+    {
+        var body = new string('A', KnownToken.Length - StreamerToken.Prefix.Length + difference);
+
+        StreamerToken.TryParse(StreamerToken.Prefix + body, out _)
+            .Should().BeFalse("only 32 bytes in base64url can be a streamer token");
+    }
 
     [Fact]
     public void ToString_Always_HidesTheSecret()

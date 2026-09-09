@@ -41,17 +41,92 @@ public sealed class ConfigEndpointTests : IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    [Fact]
-    public async Task GetChannel_ExpiredJwt_IsUnauthorized()
+    [Theory]
+    [InlineData(60)]
+    [InlineData(3600)]
+    public async Task GetChannel_ExpiredJwt_IsUnauthorized(int secondsAgo)
     {
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer",
-            TestJwt.Expired(HotaTwitchApiFactory.ChannelId, HotaTwitchApiFactory.ExtensionSecretBase64));
+            TestJwt.Expired(
+                HotaTwitchApiFactory.ChannelId,
+                HotaTwitchApiFactory.ExtensionSecretBase64,
+                TimeSpan.FromSeconds(secondsAgo)));
 
         using var response = await client.GetAsync(Channel, TestContext.Current.CancellationToken);
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetChannel_JwtExpiredInsideTheClockSkew_IsStillAccepted()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwt.Expired(
+                HotaTwitchApiFactory.ChannelId,
+                HotaTwitchApiFactory.ExtensionSecretBase64,
+                TimeSpan.FromSeconds(1)));
+
+        using var response = await client.GetAsync(Channel, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, "a small clock skew is tolerated on purpose");
+    }
+
+    [Fact]
+    public async Task GetChannel_UnsignedJwt_IsUnauthorized()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", TestJwt.WithAlgorithmNone(HotaTwitchApiFactory.ChannelId));
+
+        using var response = await client.GetAsync(Channel, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetChannel_JwtWithTheSignatureStripped_IsUnauthorized()
+    {
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwt.WithoutSignature(HotaTwitchApiFactory.ChannelId, HotaTwitchApiFactory.ExtensionSecretBase64));
+
+        using var response = await client.GetAsync(Channel, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task PreflightForToken_FromTheExtensionOrigin_IsAllowed()
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, Token);
+        request.Headers.Add("Origin", $"https://{HotaTwitchApiFactory.ClientId}.ext-twitch.tv");
+        request.Headers.Add("Access-Control-Request-Method", "DELETE");
+        request.Headers.Add("Access-Control-Request-Headers", "authorization");
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.Headers.GetValues("Access-Control-Allow-Origin")
+            .Should().Equal($"https://{HotaTwitchApiFactory.ClientId}.ext-twitch.tv");
+        response.Headers.GetValues("Access-Control-Allow-Methods").Should().Contain(methods => methods.Contains("DELETE", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task PreflightForToken_FromAnotherOrigin_IsNotAllowed()
+    {
+        using var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, Token);
+        request.Headers.Add("Origin", "https://evil.example");
+        request.Headers.Add("Access-Control-Request-Method", "DELETE");
+
+        using var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.Headers.Contains("Access-Control-Allow-Origin").Should().BeFalse();
     }
 
     [Fact]

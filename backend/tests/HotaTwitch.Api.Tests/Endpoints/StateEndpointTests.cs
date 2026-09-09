@@ -7,6 +7,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using HotaTwitch.Api.Tests.Infrastructure;
 using HotaTwitch.Domain.Broadcasting;
+using HotaTwitch.Domain.Channels;
 using Xunit;
 
 namespace HotaTwitch.Api.Tests.Endpoints;
@@ -94,9 +95,17 @@ public sealed class StateEndpointTests : IAsyncLifetime
     [InlineData("")]
     [InlineData("not-a-token")]
     [InlineData("hts_ZmFrZS10b2tlbi10aGF0LW5vLWNoYW5uZWwtaGFz")]
-    public async Task PostState_UnknownToken_IsUnauthorized(string? bearer)
+    public async Task PostState_MalformedToken_IsUnauthorized(string? bearer)
     {
         var status = await PostAsync(bearer, StateDocuments.Bytes());
+
+        status.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task PostState_WellFormedTokenThatNoChannelHolds_IsUnauthorized()
+    {
+        var status = await PostAsync(StreamerToken.Generate().Value, StateDocuments.Bytes());
 
         status.Should().Be(HttpStatusCode.Unauthorized);
     }

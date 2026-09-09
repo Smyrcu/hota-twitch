@@ -15,6 +15,8 @@ public sealed class StreamerToken
     private const int SecretByteCount = 32;
     private const int HintCharacterCount = 2;
 
+    private static readonly int SecretCharacterCount = Base64Url.GetEncodedLength(SecretByteCount);
+
     private StreamerToken(string value) => Value = value;
 
     public string Value { get; }
@@ -32,7 +34,7 @@ public sealed class StreamerToken
         }
 
         var body = value[Prefix.Length..];
-        if (body.Length == 0 || !IsBase64Url(body))
+        if (body.Length != SecretCharacterCount || !IsBase64Url(body))
         {
             return false;
         }

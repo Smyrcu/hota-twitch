@@ -24,7 +24,7 @@ internal sealed class BroadcastDispatcher(BroadcastCoalescer coalescer, ILogger<
                 await coalescer.PublishDueAsync(stoppingToken);
             }
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
             BroadcastDispatcherLog.Stopped(logger);
         }

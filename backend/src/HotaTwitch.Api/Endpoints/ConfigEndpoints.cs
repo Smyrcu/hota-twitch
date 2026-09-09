@@ -12,7 +12,9 @@ internal static class ConfigEndpoints
 
     public static IEndpointRouteBuilder MapConfigEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        var config = endpoints.MapGroup("/v1/config").AddEndpointFilter<BroadcasterEndpointFilter>();
+        var config = endpoints.MapGroup("/v1/config")
+            .RequireCors(ExtensionCors.PolicyName)
+            .AddEndpointFilter<BroadcasterEndpointFilter>();
 
         config.MapGet("/channel", GetChannelAsync);
         config.MapPost("/token", IssueTokenAsync);

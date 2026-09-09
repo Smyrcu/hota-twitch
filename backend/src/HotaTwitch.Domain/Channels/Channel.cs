@@ -1,4 +1,3 @@
-
 namespace HotaTwitch.Domain.Channels;
 
 /// <summary>A Twitch channel with a streamer token bound to it.</summary>

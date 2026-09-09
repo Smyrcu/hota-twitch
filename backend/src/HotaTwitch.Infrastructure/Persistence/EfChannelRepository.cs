@@ -43,6 +43,17 @@ internal sealed class EfChannelRepository(HotaTwitchDbContext database) : IChann
         await database.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<bool> TouchLastStateAsync(Channel channel, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(channel);
+
+        var updated = await database.Channels
+            .Where(candidate => candidate.ChannelId == channel.Id.Value && candidate.TokenHash == channel.TokenHash.Value)
+            .ExecuteUpdateAsync(row => row.SetProperty(record => record.LastStateAt, channel.LastStateAt), cancellationToken);
+
+        return updated > 0;
+    }
+
     public async Task RemoveAsync(ChannelId channelId, CancellationToken cancellationToken) =>
         await database.Channels
             .Where(candidate => candidate.ChannelId == channelId.Value)

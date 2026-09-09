@@ -2,7 +2,7 @@ using HotaTwitch.Domain.Channels;
 
 namespace HotaTwitch.Infrastructure.Twitch;
 
-public interface ITwitchExtensionJwtFactory
+internal interface ITwitchExtensionJwtFactory
 {
     /// <summary>
     /// Signs the external JWT that authorises one PubSub broadcast to <paramref name="channelId"/>.

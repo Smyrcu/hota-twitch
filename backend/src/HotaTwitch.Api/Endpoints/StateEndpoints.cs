@@ -2,6 +2,7 @@ using System.Buffers;
 using HotaTwitch.Api.Authentication;
 using HotaTwitch.Application.Ingest;
 using HotaTwitch.Domain.Broadcasting;
+using HotaTwitch.Domain.Channels;
 using Microsoft.Net.Http.Headers;
 
 namespace HotaTwitch.Api.Endpoints;
@@ -23,6 +24,15 @@ internal static class StateEndpoints
         IngestStateHandler handler,
         CancellationToken cancellationToken)
     {
+        var bearer = BearerHeader.Read(context.Request);
+        if (!StreamerToken.TryParse(bearer, out _))
+        {
+            // Refused on shape alone, so an unauthenticated caller never gets a body buffered
+            // or a database lookup made on its behalf. The handler stays the authority on
+            // whether the token belongs to a channel.
+            return Unauthorized(context);
+        }
+
         if (context.Request.ContentLength > BroadcastPolicy.MaxStateDocumentBytes)
         {
             return TooLarge();
@@ -34,7 +44,7 @@ internal static class StateEndpoints
             return TooLarge();
         }
 
-        var command = new IngestStateCommand(BearerHeader.Read(context.Request), document);
+        var command = new IngestStateCommand(bearer, document);
         var outcome = await handler.HandleAsync(command, cancellationToken);
 
         return outcome switch
@@ -69,6 +79,11 @@ internal static class StateEndpoints
 
                 document.Write(buffer, 0, read);
             }
+        }
+        catch (BadHttpRequestException)
+        {
+            // Kestrel enforces the same limit and cuts the body off there first.
+            return null;
         }
         finally
         {

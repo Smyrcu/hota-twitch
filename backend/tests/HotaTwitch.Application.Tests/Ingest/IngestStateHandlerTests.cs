@@ -34,6 +34,7 @@ public sealed class IngestStateHandlerTests
 
         rateLimiter.TryAcquire(Arg.Any<TokenHash>()).Returns(true);
         channels.FindByTokenHashAsync(token.Hash(), Arg.Any<CancellationToken>()).Returns(channel);
+        channels.TouchLastStateAsync(channel, Arg.Any<CancellationToken>()).Returns(true);
     }
 
     [Fact]
@@ -45,14 +46,44 @@ public sealed class IngestStateHandlerTests
     }
 
     [Fact]
-    public async Task HandleAsync_ValidDocument_MarksTheChannelAsSeenAndSavesIt()
+    public async Task HandleAsync_ValidDocument_MarksTheChannelAsSeen()
     {
         clock.Advance(TimeSpan.FromMinutes(3));
 
         await HandleAsync(token.Value, StateDocuments.Valid());
 
         channel.LastStateAt.Should().Be(Now.AddMinutes(3));
-        await channels.Received(1).SaveAsync(channel, Arg.Any<CancellationToken>());
+        await channels.Received(1).TouchLastStateAsync(channel, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_TokenRevokedWhileTheRequestWasInFlight_IsUnknownToken()
+    {
+        channels.TouchLastStateAsync(channel, Arg.Any<CancellationToken>()).Returns(false);
+
+        var outcome = await HandleAsync(token.Value, StateDocuments.Valid());
+
+        outcome.Should().Be(IngestOutcome.UnknownToken);
+    }
+
+    [Fact]
+    public async Task HandleAsync_TokenRevokedWhileTheRequestWasInFlight_BroadcastsNothing()
+    {
+        channels.TouchLastStateAsync(channel, Arg.Any<CancellationToken>()).Returns(false);
+
+        await HandleAsync(token.Value, StateDocuments.Valid());
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        await publisher.DidNotReceiveWithAnyArgs()
+            .PublishAsync(Arg.Any<ChannelId>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public void ToString_Always_KeepsThePlainTokenOutOfLogs()
+    {
+        var command = new IngestStateCommand(token.Value, StateDocuments.Valid());
+
+        command.ToString().Should().NotContain(token.Value);
     }
 
     [Fact]

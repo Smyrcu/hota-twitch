@@ -14,10 +14,16 @@ namespace HotaTwitch.Application.Broadcasting;
 /// </summary>
 public sealed class BroadcastCoalescer(IPubSubPublisher publisher, IClock clock, ILogger<BroadcastCoalescer> logger)
 {
+    /// <summary>Channels are published side by side so that one slow call cannot hold up the rest.</summary>
+    private const int MaxConcurrentBroadcasts = 8;
+
     private readonly ConcurrentDictionary<ChannelId, PendingChannel> pending = new();
 
     public void Submit(ChannelId channelId, string message) =>
         pending.GetOrAdd(channelId, static _ => new PendingChannel()).Set(message);
+
+    /// <summary>Drops whatever a channel still has waiting, because it no longer has a token.</summary>
+    public void Forget(ChannelId channelId) => pending.TryRemove(channelId, out _);
 
     /// <summary>Publishes every channel whose interval has elapsed. Returns how many were sent.</summary>
     [SuppressMessage(
@@ -27,32 +33,46 @@ public sealed class BroadcastCoalescer(IPubSubPublisher publisher, IClock clock,
     public async Task<int> PublishDueAsync(CancellationToken cancellationToken)
     {
         var now = clock.UtcNow;
-        var published = 0;
+        var due = new List<(ChannelId ChannelId, string Message)>();
 
         foreach (var (channelId, channel) in pending)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!channel.TryTakeDue(now, out var message))
+            if (channel.TryTakeDue(now, out var message))
             {
-                continue;
+                due.Add((channelId, message));
             }
+        }
 
+        if (due.Count == 0)
+        {
+            return 0;
+        }
+
+        var published = 0;
+        var options = new ParallelOptions
+        {
+            CancellationToken = cancellationToken,
+            MaxDegreeOfParallelism = MaxConcurrentBroadcasts,
+        };
+
+        await Parallel.ForEachAsync(due, options, async (broadcast, publishToken) =>
+        {
             try
             {
-                await publisher.PublishAsync(channelId, message, cancellationToken);
-                published++;
+                await publisher.PublishAsync(broadcast.ChannelId, broadcast.Message, publishToken);
+                Interlocked.Increment(ref published);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                channel.PutBack(message);
                 throw;
             }
             catch (Exception exception)
             {
-                BroadcastCoalescerLog.PublishFailed(logger, channelId.Value, exception);
+                // A publisher timeout also arrives here, as a TaskCanceledException that the host
+                // did not ask for; swallowing it keeps the dispatcher alive for the next tick.
+                BroadcastCoalescerLog.PublishFailed(logger, broadcast.ChannelId.Value, exception);
             }
-        }
+        });
 
         return published;
     }
@@ -85,15 +105,6 @@ public sealed class BroadcastCoalescer(IPubSubPublisher publisher, IClock clock,
                 message = null;
                 lastPublishedAt = now;
                 return true;
-            }
-        }
-
-        /// <summary>Returns a taken message to the slot unless a newer one has arrived meanwhile.</summary>
-        public void PutBack(string value)
-        {
-            lock (gate)
-            {
-                message ??= value;
             }
         }
     }

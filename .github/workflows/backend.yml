@@ -21,42 +21,32 @@ env:
   RELEASE_ROOT: /opt/hota-twitch/releases
   CURRENT_LINK: /opt/hota-twitch/current
   HEALTH_URL: https://hota.smyrcu.net/health
+  HEALTH_TIMEOUT_SECONDS: "120"
   KEPT_RELEASES: "5"
+  SSH_OPTIONS: -o BatchMode=yes -o IdentitiesOnly=yes -i ~/.ssh/id_deploy
 
 jobs:
   build:
     name: build and test
     runs-on: ubuntu-latest
-    defaults:
-      run:
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - name: Restore
         working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
+        run: dotnet restore
 
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: backend/global.json
+      - name: Build
+        working-directory: backend
+        run: dotnet build --configuration Release --no-restore
 
-      - run: dotnet restore
-
-      - run: dotnet build --configuration Release --no-restore
-
-      - run: dotnet test --configuration Release --no-build
-
-  deploy:
-    name: publish and deploy
-    if: github.event_name != 'pull_request'
-    needs: build
-    runs-on: ubuntu-latest
-    concurrency:
-      group: deploy-backend
-      cancel-in-progress: false
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-dotnet@v4
-        with:
-          global-json-file: backend/global.json
+      - name: Test
+        working-directory: backend
+        run: dotnet test --configuration Release --no-build
 
       - name: Publish self-contained linux-x64
         working-directory: backend
@@ -67,6 +57,28 @@ jobs:
             --self-contained true \
             -p:PublishSingleFile=true \
             --output "$GITHUB_WORKSPACE/publish"
+
+      - name: Keep the tested build for the deploy job
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-${{ github.sha }}
+          path: publish/
+          retention-days: 7
+
+  deploy:
+    name: deploy
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
+    steps:
+      - name: Take the build that passed the tests
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-${{ github.sha }}
+          path: publish
 
       - name: Set up SSH
         env:
@@ -86,7 +98,7 @@ jobs:
         run: |
           release="$RELEASE_ROOT/$GITHUB_SHA"
           tar -czf - -C publish . \
-            | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            | ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" \
                 "set -eu; rm -rf '$release'; mkdir -p '$release'; tar -xzf - -C '$release'; chmod +x '$release/HotaTwitch.Api'"
 
       - name: Switch current and restart the service
@@ -95,25 +107,41 @@ jobs:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
           release="$RELEASE_ROOT/$GITHUB_SHA"
-          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+          previous=$(ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" "readlink -f '$CURRENT_LINK' 2>/dev/null || true")
+          echo "PREVIOUS_RELEASE=$previous" >> "$GITHUB_ENV"
+          ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -eu; ln -sfnT '$release' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
 
       - name: Wait for the service to answer
+        id: health
         run: |
-          for attempt in $(seq 1 30); do
+          deadline=$((SECONDS + HEALTH_TIMEOUT_SECONDS))
+          while [ "$SECONDS" -lt "$deadline" ]; do
             if curl -fsS --max-time 5 "$HEALTH_URL" | grep -q '"ok":true'; then
-              echo "healthy after $attempt attempt(s)"
+              echo "healthy"
               exit 0
             fi
             sleep 2
           done
-          echo "::error::$HEALTH_URL did not report {\"ok\":true} within 60 s"
+          echo "::error::$HEALTH_URL did not report {\"ok\":true} within $HEALTH_TIMEOUT_SECONDS s"
           exit 1
+
+      - name: Put the previous release back
+        if: failure() && steps.health.outcome == 'failure' && env.PREVIOUS_RELEASE != ''
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          echo "::warning::rolling back to $PREVIOUS_RELEASE"
+          ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -eu; ln -sfnT '$PREVIOUS_RELEASE' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
 
       - name: Drop the oldest releases
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
-            "set -eu; cd '$RELEASE_ROOT'; ls -1t | tail -n +$((KEPT_RELEASES + 1)) | xargs -r rm -rf"
+          ssh $SSH_OPTIONS "$DEPLOY_USER@$DEPLOY_HOST" "set -eu
+            cd '$RELEASE_ROOT'
+            live=\$(basename \"\$(readlink -f '$CURRENT_LINK')\")
+            ls -1t | grep -vFx \"\$live\" | tail -n +$KEPT_RELEASES | xargs -r rm -rf"

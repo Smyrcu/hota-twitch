@@ -8,6 +8,9 @@ internal sealed class TwitchExtensionJwtVerifier : ITwitchExtensionJwtVerifier
 {
     private static readonly JsonWebTokenHandler Handler = new();
 
+    /// <summary>The default of five minutes keeps a JWT usable long after Twitch considers it dead.</summary>
+    private static readonly TimeSpan AllowedClockSkew = TimeSpan.FromSeconds(30);
+
     private readonly ILogger<TwitchExtensionJwtVerifier> logger;
     private readonly TokenValidationParameters parameters;
 
@@ -26,6 +29,7 @@ internal sealed class TwitchExtensionJwtVerifier : ITwitchExtensionJwtVerifier
             ValidateLifetime = true,
             ValidateIssuer = false,
             ValidateAudience = false,
+            ClockSkew = AllowedClockSkew,
         };
     }
 

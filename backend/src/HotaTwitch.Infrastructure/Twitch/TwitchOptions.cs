@@ -22,6 +22,9 @@ public sealed class TwitchOptions
     /// <summary>How long an external JWT stays valid. Twitch only needs it for the one call.</summary>
     public TimeSpan ExternalTokenLifetime { get; set; } = TimeSpan.FromMinutes(1);
 
-    /// <summary>Writes broadcasts to the log instead of sending them; for local runs without Twitch.</summary>
-    public bool UseFakePubSub { get; set; }
+    /// <summary>
+    /// How long one broadcast may take. It is short on purpose: the dispatcher publishes channels
+    /// side by side, but a call that hangs still delays the state a viewer sees.
+    /// </summary>
+    public TimeSpan HelixTimeout { get; set; } = TimeSpan.FromSeconds(5);
 }

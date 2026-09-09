@@ -51,6 +51,49 @@ public sealed class BroadcastCoalescerTests
     }
 
     [Fact]
+    public async Task PublishDueAsync_SubmitBeforeTheIntervalElapses_HoldsTheMessageBack()
+    {
+        Submit("first");
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        clock.Advance(TimeSpan.FromMilliseconds(300));
+        Submit("second");
+        var published = await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        published.Should().Be(0, "the channel published less than a second ago");
+        CapturedDocuments().Should().Equal("first");
+
+        clock.Advance(TimeSpan.FromMilliseconds(700));
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+        CapturedDocuments().Should().Equal("first", "second");
+    }
+
+    [Fact]
+    public async Task PublishDueAsync_PublisherTimesOut_SwallowsTheCancellationTheHostDidNotAskFor()
+    {
+        publisher.PublishAsync(Channel, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout"));
+        coalescer.Submit(Channel, "gz:one");
+
+        var published = await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        published.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task PublishDueAsync_HostIsShuttingDown_LetsTheCancellationThrough()
+    {
+        using var shutdown = new CancellationTokenSource();
+        publisher.PublishAsync(Channel, Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .ThrowsAsync(_ => { shutdown.Cancel(); return new TaskCanceledException(); });
+        coalescer.Submit(Channel, "gz:one");
+
+        var publish = async () => await coalescer.PublishDueAsync(shutdown.Token);
+
+        await publish.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
     public async Task PublishDueAsync_SubmitAfterTheInterval_PublishesTheSecondMessage()
     {
         Submit("first");

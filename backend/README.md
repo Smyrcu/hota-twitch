@@ -54,10 +54,22 @@ dotnet ef migrations add <Name> --project src/HotaTwitch.Infrastructure --output
 | `TWITCH_OWNER_USER_ID` | yes | Twitch user id of the extension owner; it becomes the `user_id` claim of the external JWT |
 | `ConnectionStrings__Default` | no | SQLite connection string, `Data Source=hota-twitch.db` by default. On the server it points at `/var/lib/hota-twitch/hota.db` |
 | `ASPNETCORE_URLS` | no | Where Kestrel listens; the server runs it behind Caddy on `127.0.0.1:5080` |
+| `TWITCH_ALLOWED_ORIGINS` | no | Extra CORS origins, comma separated. The extension's own origin is always allowed; this is for the local developer rig Twitch serves on `https://localhost:8080` |
 | `TWITCH_FAKE_PUBSUB` | no | `true` logs broadcasts instead of sending them. Never set on the server |
+
+The three required variables are checked at startup, so a missing or malformed one stops the
+service instead of surfacing later as failing requests.
 
 In production these live in `/etc/hota-twitch/env` (mode 0600, owner `hota`). They never enter
 the repository.
+
+## Who may call what
+
+`POST /v1/state` is called by the plugin over plain HTTP, so it needs no CORS. The `/v1/config`
+endpoints are called from the configuration page that Twitch serves at
+`https://<client-id>.ext-twitch.tv`, which makes every one of them cross-origin, and the
+`Authorization` header turns them into preflighted requests. Only that origin, plus anything
+`TWITCH_ALLOWED_ORIGINS` adds, is allowed, and only for GET, POST and DELETE.
 
 ## How a streamer gets connected
 
@@ -82,6 +94,20 @@ the repository.
   `Retry-After`.
 - A body that is not a version 1 state document gets 400. The backend checks `v`, `ts`, `screen`,
   `player.id`, `heroes` and `towns`; everything else it relays untouched.
-- Broadcasts are coalesced to one per second per channel, the newest document winning. A document
-  whose `gz:` message would pass 5120 bytes is dropped with a warning and the previous broadcast
-  stays; the producer still gets 202, because the document itself was accepted.
+- Broadcasts are coalesced to one per second per channel, the newest document winning. Channels are
+  published side by side, so one slow call to Twitch does not hold the others back, and the client
+  gives up on a broadcast after five seconds. A document whose `gz:` message would pass 5120 bytes
+  is dropped with a warning and the previous broadcast stays; the producer still gets 202, because
+  the document itself was accepted.
+- A token that is rotated or revoked while a state post is in flight wins: the post is answered 401
+  and nothing is broadcast, rather than the old token being written back into the database.
+
+## Two decisions worth stating
+
+The state document and its `gz:` encoding live in `HotaTwitch.Domain`, not in Infrastructure,
+although they look like transport. Relaying that document *is* what this service is for: the
+protocol is the domain here, and the limits, the encoding and what counts as a valid document are
+one set of rules that belong together.
+
+`Microsoft.Testing.Platform` is selected in `global.json` because VSTest no longer runs xunit v3 on
+the .NET 10 SDK.

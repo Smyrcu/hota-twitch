@@ -23,15 +23,15 @@ public sealed class StateDocumentValidatorTests
     }
 
     [Theory]
-    [InlineData("screen", "none")]
-    [InlineData("screen", "town")]
-    [InlineData("screen", "combat")]
-    [InlineData("screen", "other")]
-    public void TryValidate_EveryScreenFromTheProtocol_Succeeds(string field, string value)
+    [InlineData("none")]
+    [InlineData("town")]
+    [InlineData("combat")]
+    [InlineData("other")]
+    public void TryValidate_EveryScreenFromTheProtocol_Succeeds(string screen)
     {
-        var document = Valid.Replace("\"adventure\"", $"\"{value}\"", System.StringComparison.Ordinal);
+        var document = Valid.Replace("\"adventure\"", $"\"{screen}\"", System.StringComparison.Ordinal);
 
-        StateDocumentValidator.TryValidate(Encoding.UTF8.GetBytes(document), out _).Should().BeTrue(field);
+        StateDocumentValidator.TryValidate(Encoding.UTF8.GetBytes(document), out _).Should().BeTrue();
     }
 
     [Theory]

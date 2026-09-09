@@ -48,7 +48,10 @@ public sealed class IngestStateHandler(
         }
 
         channel.MarkStateReceived(clock.UtcNow);
-        await channels.SaveAsync(channel, cancellationToken);
+        if (!await channels.TouchLastStateAsync(channel, cancellationToken))
+        {
+            return IngestOutcome.UnknownToken;
+        }
 
         if (BroadcastMessage.TryEncode(command.Document.Span, out var message))
         {
