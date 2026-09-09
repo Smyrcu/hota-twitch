@@ -3,10 +3,10 @@
  * base name of the atlas pair exported by `tools/` into `assets/fonts/`.
  */
 export const FONT_FILES = {
-    big: 'bigfont',
-    medium: 'medfont',
-    small: 'smalfont',
-    tiny: 'tiny',
+  big: 'bigfont',
+  medium: 'medfont',
+  small: 'smalfont',
+  tiny: 'tiny',
 } as const;
 
 export type FontId = keyof typeof FONT_FILES;
@@ -22,10 +22,10 @@ export const fontImagePath = (root: string, font: FontId): string => `${root}/${
 
 /** The game's text colours: white for body text, yellow for headings, gold for values. */
 export const TEXT_COLOURS = {
-    white: '#ffffff',
-    yellow: '#ffe794',
-    gold: '#d4b24c',
-    grey: '#9c9c9c',
+  white: '#ffffff',
+  yellow: '#ffe794',
+  gold: '#d4b24c',
+  grey: '#9c9c9c',
 } as const;
 
 export type TextColour = keyof typeof TEXT_COLOURS;
