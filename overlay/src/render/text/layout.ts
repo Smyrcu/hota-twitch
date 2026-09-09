@@ -6,6 +6,8 @@ export interface TextOptions {
   readonly align?: TextAlign;
   /** Wraps on word boundaries; a single word longer than this is left overflowing. */
   readonly maxWidth?: number;
+  /** Fields framed in the popup bitmap are a fixed height, so the rest is dropped. */
+  readonly maxLines?: number;
 }
 
 /** One glyph to blit: source rectangle in the atlas, destination relative to the text origin. */
@@ -75,7 +77,8 @@ function originFor(align: TextAlign, lineWidth: number, blockWidth: number): num
  */
 export function layoutText(atlas: FontAtlas, text: string, options: TextOptions = {}): TextLayout {
   const fallback = fallbackAdvance(atlas);
-  const lines = wrap(atlas, text, options.maxWidth, fallback);
+  const wrapped = wrap(atlas, text, options.maxWidth, fallback);
+  const lines = options.maxLines === undefined ? wrapped : wrapped.slice(0, Math.max(1, options.maxLines));
   const widths = lines.map((codes) => measure(atlas, codes, fallback));
   const blockWidth = Math.max(0, ...widths);
   const align = options.align ?? 'left';

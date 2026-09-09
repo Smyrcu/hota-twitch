@@ -45,14 +45,6 @@ async function loadFont(root: string, font: FontId): Promise<LoadedFont | null> 
   }
 }
 
-async function loadFirst(roots: readonly string[], font: FontId): Promise<LoadedFont | null> {
-  for (const root of roots) {
-    const loaded = await loadFont(root, font);
-    if (loaded !== null) return loaded;
-  }
-  return null;
-}
-
 /**
  * The game's bitmap fonts. The atlases hold white glyphs with alpha, so a colour is applied
  * once per (font, colour) into an offscreen canvas rather than per glyph on every repaint.
@@ -60,9 +52,8 @@ async function loadFirst(roots: readonly string[], font: FontId): Promise<Loaded
 export class FontStore {
   private readonly fonts = new Map<FontId, LoadedFont>();
 
-  /** Later roots are stand-ins used when a font has not been exported into the bundle yet. */
-  async load(roots: readonly string[] = [FONT_ROOT]): Promise<void> {
-    const loaded = await Promise.all(FONT_IDS.map(async (font) => [font, await loadFirst(roots, font)] as const));
+  async load(): Promise<void> {
+    const loaded = await Promise.all(FONT_IDS.map(async (font) => [font, await loadFont(FONT_ROOT, font)] as const));
     for (const [font, result] of loaded) {
       if (result !== null) this.fonts.set(font, result);
     }

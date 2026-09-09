@@ -1,17 +1,17 @@
 import { heroClassName } from '../../data/names.js';
-import { artifactIcon, heroPortrait, primaryIcon, skillIcon } from '../../data/sprites.js';
+import { artifactIcon, heroPortrait, skillIcon } from '../../data/sprites.js';
 import { armyOps } from '../army.js';
 import { SINGLE_LINE, SectionBuilder, type LineCounter } from '../build.js';
-import { sprite, text, type Card, type DrawOp } from '../display.js';
+import { fieldText, sprite, text, type Card, type DrawOp } from '../display.js';
 import {
   CARD_HEIGHT,
   CARD_WIDTH,
   EXPANSION,
   HEADER,
+  MANA_FIELD,
   PORTRAIT,
   PRIMARY_ROW,
   cellIconX,
-  rowOrigin,
 } from '../layout.js';
 import type { Hero } from '../../state/protocol.js';
 
@@ -40,24 +40,21 @@ function iconGrid<T>(
   section.advance(4);
 }
 
-/** The popup as the game draws it on right-click: portrait, name, primary skills, army. */
+/** The popup as the game draws it on right-click: the bitmap carries the frames and the
+ * primary-skill icons, so only the hero's own values are placed into them. */
 export function heroHoverCard(hero: Hero): Card {
-  const primaryOrigin = rowOrigin(PRIMARY_ROW.cell, PRIMARY_ROW.count);
   const ops: DrawOp[] = [
     { kind: 'panel', panel: 'hero', x: 0, y: 0, width: CARD_WIDTH, height: CARD_HEIGHT },
     sprite(heroPortrait(hero.picture), PORTRAIT.x, PORTRAIT.y, PORTRAIT.width, PORTRAIT.height),
-    text(hero.name, 'big', 'yellow', HEADER.x, HEADER.nameY, 'left', HEADER.width),
-    text(`Level ${hero.level}`, 'medium', 'white', HEADER.x, HEADER.lineY),
-    text(heroClassName(hero.class), 'small', 'white', HEADER.x, HEADER.subLineY, 'left', HEADER.width),
+    fieldText(hero.name, 'medium', 'yellow', HEADER.x, HEADER.nameY, HEADER.width),
   ];
 
   hero.primary.forEach((value, index) => {
-    const x = cellIconX(primaryOrigin, PRIMARY_ROW.cell, PRIMARY_ROW.icon, index);
-    const centre = primaryOrigin + PRIMARY_ROW.cell * index + PRIMARY_ROW.cell / 2;
-    ops.push(sprite(primaryIcon(index), x, PRIMARY_ROW.y, PRIMARY_ROW.icon, PRIMARY_ROW.icon));
-    ops.push(text(String(value), 'small', 'gold', centre, PRIMARY_ROW.valueY, 'center'));
+    const centre = PRIMARY_ROW.first + PRIMARY_ROW.cell * index;
+    ops.push(text(String(value), 'small', 'gold', centre, PRIMARY_ROW.y, 'center'));
   });
 
+  ops.push(text(String(hero.mana), 'tiny', 'white', MANA_FIELD.centre, MANA_FIELD.y, 'center'));
   ops.push(...armyOps(hero.army));
   return { width: CARD_WIDTH, height: CARD_HEIGHT, ops };
 }
@@ -73,6 +70,7 @@ export function heroExpansion(
 ): { ops: readonly DrawOp[]; height: number } {
   const section = new SectionBuilder(top + EXPANSION.paddingTop, countLines);
 
+  section.line(`Level ${hero.level} ${heroClassName(hero.class)}`);
   section.line(`Movement ${hero.move} / ${hero.moveMax}`);
   section.line(`Mana ${hero.mana} / ${hero.manaMax}`);
   section.line(`Experience ${hero.exp}`);

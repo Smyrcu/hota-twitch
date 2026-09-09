@@ -17,17 +17,14 @@ const sources = (card: { ops: readonly { kind: string }[] }): string[] =>
   card.ops.filter((op): op is { kind: 'sprite'; src: string } => op.kind === 'sprite').map((op) => op.src);
 
 describe('hero card', () => {
-  it('is the size of the game popup and draws the portrait, primary skills and army', () => {
+  it('is the size of the popup bitmap and draws only what the bitmap does not', () => {
     const card = heroHoverCard(hero(0));
 
     expect(card.width).toBe(CARD_WIDTH);
     expect(card.height).toBe(CARD_HEIGHT);
+    // The primary-skill icons are drawn in popup-hero.png; only their values are placed.
     expect(sources(card)).toEqual([
       'assets/heroes/large/196.png',
-      'assets/primary/attack.png',
-      'assets/primary/defense.png',
-      'assets/primary/power.png',
-      'assets/primary/knowledge.png',
       'assets/creatures/13.png',
       'assets/creatures/110.png',
       'assets/creatures/116.png',
@@ -36,6 +33,15 @@ describe('hero card', () => {
       'assets/creatures/127.png',
       'assets/creatures/131.png',
     ]);
+    expect(sources(card).some((src) => src.startsWith('assets/primary/'))).toBe(false);
+  });
+
+  it('places the four primary values under the icons the bitmap draws', () => {
+    const values = heroHoverCard(hero(0))
+      .ops.filter((op) => op.kind === 'text' && op.colour === 'gold')
+      .map((op) => (op.kind === 'text' ? op.text : ''));
+
+    expect(values).toEqual(['26', '25', '25', '26']);
   });
 
   it('keeps every army slot inside the card', () => {

@@ -2,7 +2,7 @@ import { fortName, hallName, spellName, townTypeName } from '../../data/names.js
 import { fortIcon, hallIcon, spellIcon, townPicture } from '../../data/sprites.js';
 import { armyOps } from '../army.js';
 import { SINGLE_LINE, SectionBuilder, type LineCounter } from '../build.js';
-import { sprite, text, type Card, type DrawOp } from '../display.js';
+import { fieldText, sprite, text, type Card, type DrawOp } from '../display.js';
 import {
   BUILDING_ROW,
   CARD_HEIGHT,
@@ -25,13 +25,12 @@ export function townHoverCard(town: Town): Card {
   const ops: DrawOp[] = [
     { kind: 'panel', panel: 'town', x: 0, y: 0, width: CARD_WIDTH, height: CARD_HEIGHT },
     sprite(townPicture(town.type, town.fort), PORTRAIT.x, PORTRAIT.y, PORTRAIT.width, PORTRAIT.height),
-    text(town.name, 'big', 'yellow', HEADER.x, HEADER.nameY, 'left', HEADER.width),
-    text(townTypeName(town.type), 'medium', 'white', HEADER.x, HEADER.lineY, 'left', HEADER.width),
-    sprite(hallIcon(town.hall), HEADER.x, BUILDING_ROW.y, BUILDING_ROW.icon, BUILDING_ROW.icon),
+    fieldText(town.name, 'medium', 'yellow', HEADER.x, HEADER.nameY, HEADER.width),
+    sprite(hallIcon(town.hall), BUILDING_ROW.x, BUILDING_ROW.y, BUILDING_ROW.icon, BUILDING_ROW.icon),
     ...armyOps(garrisonArmy(town)),
   ];
   if (fort !== null) {
-    const at = HEADER.x + BUILDING_ROW.icon + BUILDING_ROW.gap;
+    const at = BUILDING_ROW.x + BUILDING_ROW.gap;
     ops.push(sprite(fort, at, BUILDING_ROW.y, BUILDING_ROW.icon, BUILDING_ROW.icon));
   }
   return { width: CARD_WIDTH, height: CARD_HEIGHT, ops };
@@ -47,12 +46,15 @@ function researchIndex(level: readonly number[], research: Research): number {
   return byId >= 0 ? byId : research.slot;
 }
 
+const GUILD_LEVELS = 5;
+
 function guildSection(section: SectionBuilder, town: Town): void {
   if (town.guild <= 0) return;
   section.heading(`Mage Guild level ${town.guild}`);
   const { cell, iconWidth, iconHeight, perRow } = EXPANSION.spell;
 
-  for (let level = 1; level <= town.guild; level += 1) {
+  // The contract sends five arrays, one per guild level; an unbuilt level is empty.
+  for (let level = 1; level <= GUILD_LEVELS; level += 1) {
     const spells = town.spells[level - 1] ?? [];
     if (spells.length === 0) continue;
     section.line(`Level ${level}`);
@@ -88,7 +90,7 @@ export function townExpansion(
 ): { ops: readonly DrawOp[]; height: number } {
   const section = new SectionBuilder(top + EXPANSION.paddingTop, countLines);
 
-  section.line(`${hallName(town.hall)} · ${fortName(town.fort)}`);
+  section.line(`${townTypeName(town.type)} · ${hallName(town.hall)} · ${fortName(town.fort)}`);
   section.advance(4);
   guildSection(section, town);
 

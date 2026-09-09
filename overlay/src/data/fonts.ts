@@ -13,9 +13,7 @@ export type FontId = keyof typeof FONT_FILES;
 
 export const FONT_IDS = Object.keys(FONT_FILES) as readonly FontId[];
 
-/** Where the atlases ship. `dev/fonts` holds stand-ins used only by the mock mode. */
 export const FONT_ROOT = 'assets/fonts';
-export const DEV_FONT_ROOT = 'dev/fonts';
 
 export const fontAtlasPath = (root: string, font: FontId): string => `${root}/${FONT_FILES[font]}.json`;
 export const fontImagePath = (root: string, font: FontId): string => `${root}/${FONT_FILES[font]}.png`;

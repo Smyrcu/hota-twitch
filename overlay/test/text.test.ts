@@ -54,3 +54,17 @@ describe('bitmap text layout', () => {
     expect(parseAtlas(TEST_ATLAS)).not.toBeNull();
   });
 });
+
+describe('fields framed by the popup bitmap', () => {
+  it('keeps a long value to the line the field is tall enough for', () => {
+    const layout = layoutText(TEST_ATLAS, 'AA BB AA', { maxWidth: 20, maxLines: 1 });
+
+    expect(layout.lines).toBe(1);
+    expect(layout.height).toBe(10);
+    expect(layout.glyphs.every((glyph) => glyph.dy === 0)).toBe(true);
+  });
+
+  it('leaves text that already fits untouched', () => {
+    expect(layoutText(TEST_ATLAS, 'AB', { maxWidth: 100, maxLines: 1 }).glyphs).toHaveLength(2);
+  });
+});

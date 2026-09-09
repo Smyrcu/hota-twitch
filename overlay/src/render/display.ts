@@ -20,6 +20,7 @@ export type DrawOp =
           readonly y: number;
           readonly align: TextAlign;
           readonly maxWidth?: number;
+          readonly maxLines?: number;
       };
 
 /**
@@ -48,4 +49,16 @@ export function text(
   return maxWidth === undefined
     ? { kind: 'text', text: value, font, colour, x, y, align }
     : { kind: 'text', text: value, font, colour, x, y, align, maxWidth };
+}
+
+/** Text in a field the popup bitmap frames: one line, clipped to the field width. */
+export function fieldText(
+  value: string,
+  font: FontId,
+  colour: TextColour,
+  x: number,
+  y: number,
+  maxWidth: number,
+): DrawOp {
+  return { kind: 'text', text: value, font, colour, x, y, align: 'left', maxWidth, maxLines: 1 };
 }

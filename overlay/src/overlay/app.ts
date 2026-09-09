@@ -1,4 +1,3 @@
-import { DEV_FONT_ROOT, FONT_ROOT } from '../data/fonts.js';
 import { readParams, type OverlayParams } from '../dev/params.js';
 import { pollMock } from '../dev/mock.js';
 import { cardFor, type Selection } from '../render/card.js';
@@ -54,7 +53,7 @@ export class OverlayApp {
   }
 
   async start(): Promise<void> {
-    await this.fonts.load(this.params.mock ? [FONT_ROOT, DEV_FONT_ROOT] : [FONT_ROOT]);
+    await this.fonts.load();
     this.measure();
     window.addEventListener('resize', () => this.measure());
     window.addEventListener('pagehide', () => this.stop());

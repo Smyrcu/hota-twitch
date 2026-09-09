@@ -51,11 +51,11 @@ export class CardPainter {
     const atlas = this.fonts.atlas(op.font);
     const sheet = this.fonts.sheet(op.font, op.colour);
     if (atlas === null || sheet === null) return;
-    const layout = layoutText(
-      atlas,
-      op.text,
-      op.maxWidth === undefined ? { align: op.align } : { align: op.align, maxWidth: op.maxWidth },
-    );
+    const layout = layoutText(atlas, op.text, {
+      align: op.align,
+      ...(op.maxWidth === undefined ? {} : { maxWidth: op.maxWidth }),
+      ...(op.maxLines === undefined ? {} : { maxLines: op.maxLines }),
+    });
     const originX = op.x + anchorOffset(op.align, layout.width);
     for (const glyph of layout.glyphs) {
       context.drawImage(
