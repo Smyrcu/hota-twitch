@@ -32,7 +32,8 @@ town names. Everything else is looked up in the overlay.
 arrays. The overlay shows cards only on `adventure`.
 `display` describes the game window and the HD Mod interface scale (1 = pixel-exact 800x600
 widgets, 2 = doubled, fractional values allowed). When the producer cannot read the scale it
-omits `uiScale` and the consumer assumes 1.
+omits `uiScale`; the backend then fills it from the channel's settings (section 4), and the
+consumer assumes 1 if it is still absent.
 
 ### Hero
 
@@ -122,10 +123,16 @@ Extension Helper hands to the page (`onAuthorized`); the backend verifies HS256 
 extension secret and requires `role == "broadcaster"`.
 
 ```
-GET    /v1/config/channel   -> { "hasToken": true, "tokenHint": "hts_ab…", "lastStateAt": "2026-09-09T22:00:00Z" | null }
+GET    /v1/config/channel   -> { "hasToken": true, "tokenHint": "hts_ab…", "lastStateAt": "2026-09-09T22:00:00Z" | null,
+                                 "settings": { "uiScale": 1.5 } }
 POST   /v1/config/token     -> { "token": "hts_…" }      // generates or rotates; shown once
 DELETE /v1/config/token     -> 204
+PUT    /v1/config/settings  <- { "uiScale": 1.5 }        // 1 ≤ uiScale ≤ 4, at most two decimals; -> 204
 ```
+
+`settings.uiScale` is the HD Mod interface scale the streamer plays with. On ingest the backend
+copies it into `display.uiScale` whenever the producer left the field out, so viewers always
+receive the value the streamer configured.
 
 ## 5. Health
 
