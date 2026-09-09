@@ -135,8 +135,9 @@ Solution `backend/HotaTwitch.slnx`:
   unknown token → 401, oversized → 413, rate limit → 429, coalescing, JWT role check,
   PubSub message format and size.
 
-Configuration from environment: `TWITCH_CLIENT_ID`, `TWITCH_EXTENSION_SECRET`,
-`ConnectionStrings__Default`, `ASPNETCORE_URLS`.
+Configuration from environment: `TWITCH_CLIENT_ID`, `TWITCH_EXTENSION_SECRET` (base64 as shown in
+the developer console), `TWITCH_OWNER_USER_ID` (the extension owner's Twitch user id; `user_id` claim
+of the external JWT), `ConnectionStrings__Default`, `ASPNETCORE_URLS`.
 
 ### Deployment
 
