@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace hota_twitch
@@ -128,6 +129,21 @@ struct StateSnapshot
     std::vector<TownSnapshot> towns;
 
     void clear();
+
+    /// Whether this describes the same game state as `other`. The timestamp is left out: it
+    /// moves on every tick, and a document that only differs by its clock is not news the
+    /// backend needs to hear about.
+    bool sameStateAs(const StateSnapshot& other) const;
 };
+
+bool operator==(const ArmySlot& a, const ArmySlot& b);
+bool operator==(const SkillEntry& a, const SkillEntry& b);
+bool operator==(const EquippedEntry& a, const EquippedEntry& b);
+bool operator==(const HeroSnapshot& a, const HeroSnapshot& b);
+bool operator==(const Research& a, const Research& b);
+bool operator==(const TownSnapshot& a, const TownSnapshot& b);
+bool operator==(const GameDate& a, const GameDate& b);
+bool operator==(const Display& a, const Display& b);
+bool operator==(const PlayerSnapshot& a, const PlayerSnapshot& b);
 
 } // namespace hota_twitch

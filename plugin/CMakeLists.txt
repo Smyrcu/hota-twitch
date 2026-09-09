@@ -16,6 +16,7 @@ add_library(hota_twitch_core STATIC
     src/core/json_writer.cpp
     src/core/logging.cpp
     src/core/mailbox.cpp
+    src/core/post_policy.cpp
     src/core/serialize.cpp
     src/core/snapshot.cpp
     src/core/town_rules.cpp
@@ -38,10 +39,12 @@ if(WIN32)
         src/dllmain.cpp
         src/game/hd_mod.cpp
         src/game/hooks.cpp
+        src/game/memory.cpp
         src/game/reader.cpp
         src/platform/file_logger.cpp
         src/platform/http_client.cpp
         src/platform/module_path.cpp
+        src/platform/poster.cpp
         src/plugin.cpp
     )
     set_target_properties(hota-twitch PROPERTIES
@@ -54,12 +57,16 @@ if(WIN32)
     if(MSVC)
         target_compile_options(hota-twitch PRIVATE /W4 /WX /permissive-)
     else()
-        target_compile_options(hota-twitch PRIVATE -Wall -Wextra -Werror)
+        target_compile_options(hota-twitch PRIVATE
+            -Wall -Wextra -Werror -ffunction-sections -fdata-sections)
         # The streamer copies one file next to the game, so nothing may be left to find at
-        # load time: link the GCC, C++ and pthread runtimes into the DLL.
+        # load time: link the GCC, C++ and pthread runtimes into the DLL. Statically linking
+        # them is also what makes dropping the unused parts and the symbols worthwhile - it
+        # takes the release build from twelve megabytes to a bit over one.
         target_link_options(hota-twitch PRIVATE
             -static -static-libgcc -static-libstdc++
-            -Wl,--enable-stdcall-fixup
+            -Wl,--gc-sections
+            $<$<NOT:$<CONFIG:Debug>>:-s>
         )
     endif()
 else()
