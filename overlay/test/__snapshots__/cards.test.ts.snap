@@ -2,7 +2,7 @@
 
 exports[`hero card > matches the expanded layout snapshot, with skills, artifacts and backpack 1`] = `
 {
-  "height": 800,
+  "height": 804,
   "ops": [
     {
       "height": 186,
@@ -23,7 +23,7 @@ exports[`hero card > matches the expanded layout snapshot, with skills, artifact
     {
       "align": "left",
       "colour": "yellow",
-      "font": "medium",
+      "font": "big",
       "kind": "text",
       "maxWidth": 118,
       "text": "Todd",
@@ -33,7 +33,7 @@ exports[`hero card > matches the expanded layout snapshot, with skills, artifact
     {
       "align": "left",
       "colour": "white",
-      "font": "small",
+      "font": "medium",
       "kind": "text",
       "text": "Level 22",
       "x": 70,
@@ -237,7 +237,7 @@ exports[`hero card > matches the expanded layout snapshot, with skills, artifact
       "y": 156,
     },
     {
-      "height": 614,
+      "height": 618,
       "kind": "panel",
       "panel": "expansion",
       "width": 194,
@@ -796,7 +796,7 @@ exports[`hero card > matches the layout snapshot 1`] = `
     {
       "align": "left",
       "colour": "yellow",
-      "font": "medium",
+      "font": "big",
       "kind": "text",
       "maxWidth": 118,
       "text": "Todd",
@@ -806,7 +806,7 @@ exports[`hero card > matches the layout snapshot 1`] = `
     {
       "align": "left",
       "colour": "white",
-      "font": "small",
+      "font": "medium",
       "kind": "text",
       "text": "Level 22",
       "x": 70,
@@ -1037,7 +1037,7 @@ exports[`town card > matches the expanded layout snapshot, with the mage guild a
     {
       "align": "left",
       "colour": "yellow",
-      "font": "medium",
+      "font": "big",
       "kind": "text",
       "maxWidth": 118,
       "text": "New Dolere",
@@ -1047,7 +1047,7 @@ exports[`town card > matches the expanded layout snapshot, with the mage guild a
     {
       "align": "left",
       "colour": "white",
-      "font": "small",
+      "font": "medium",
       "kind": "text",
       "maxWidth": 118,
       "text": "Factory",
@@ -1377,7 +1377,7 @@ exports[`town card > matches the layout snapshot 1`] = `
     {
       "align": "left",
       "colour": "yellow",
-      "font": "medium",
+      "font": "big",
       "kind": "text",
       "maxWidth": 118,
       "text": "New Dolere",
@@ -1387,7 +1387,7 @@ exports[`town card > matches the layout snapshot 1`] = `
     {
       "align": "left",
       "colour": "white",
-      "font": "small",
+      "font": "medium",
       "kind": "text",
       "maxWidth": 118,
       "text": "Factory",
