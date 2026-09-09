@@ -1,0 +1,101 @@
+{
+  "_comment": "Strefy hover w pikselach klatki 2560x1440 (HD Mod, UI 1:1), zmierzone profilem jasności ze zrzutu usera sample-game.jpg (2026-09-09): 8 bohaterów i 7 miast, wiersze co 32 px. Overlay skaluje je do rozmiaru playera. Kalibracja: ?mock=1&debug=1&bg=sample-game.jpg",
+  "frame": {
+    "width": 2560,
+    "height": 1440
+  },
+  "heroSlots": [
+    {
+      "x": 2369,
+      "y": 198,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 230,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 262,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 294,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 326,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 358,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 390,
+      "w": 64,
+      "h": 32
+    },
+    {
+      "x": 2369,
+      "y": 422,
+      "w": 64,
+      "h": 32
+    }
+  ],
+  "townSlots": [
+    {
+      "x": 2506,
+      "y": 214,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 246,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 278,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 310,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 342,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 374,
+      "w": 48,
+      "h": 32
+    },
+    {
+      "x": 2506,
+      "y": 406,
+      "w": 48,
+      "h": 32
+    }
+  ]
+}

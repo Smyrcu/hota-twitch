@@ -1,0 +1,18 @@
+# .NET
+bin/
+obj/
+*.user
+# Node
+node_modules/
+overlay/dist/
+# C++
+plugin/build/
+plugin/out/
+# secrets and local state
+.env
+*.env
+*.pem
+*.pfx
+.run/
+# tools output
+tools/out/
