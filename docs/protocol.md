@@ -134,6 +134,11 @@ PUT    /v1/config/settings  <- { "uiScale": 1.5 }        // 1 ≤ uiScale ≤ 4,
 copies it into `display.uiScale` whenever the producer left the field out, so viewers always
 receive the value the streamer configured.
 
+Settings belong to the channel, not to the token: `PUT /v1/config/settings` works before a token
+exists (it creates the channel record), `DELETE /v1/config/token` clears only the token and keeps
+the settings, and `GET /v1/config/channel` always returns `settings` (with `hasToken: false` when
+no token is bound).
+
 ## 5. Health
 
 ```
