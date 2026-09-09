@@ -1,0 +1,119 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - backend/**
+      - .github/workflows/backend.yml
+  pull_request:
+    paths:
+      - backend/**
+      - .github/workflows/backend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  RELEASE_ROOT: /opt/hota-twitch/releases
+  CURRENT_LINK: /opt/hota-twitch/current
+  HEALTH_URL: https://hota.smyrcu.net/health
+  KEPT_RELEASES: "5"
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - run: dotnet restore
+
+      - run: dotnet build --configuration Release --no-restore
+
+      - run: dotnet test --configuration Release --no-build
+
+  deploy:
+    name: publish and deploy
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-backend
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+
+      - name: Publish self-contained linux-x64
+        working-directory: backend
+        run: |
+          dotnet publish src/HotaTwitch.Api/HotaTwitch.Api.csproj \
+            --configuration Release \
+            --runtime linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            --output "$GITHUB_WORKSPACE/publish"
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_deploy ~/.ssh/known_hosts
+
+      - name: Upload the release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          release="$RELEASE_ROOT/$GITHUB_SHA"
+          tar -czf - -C publish . \
+            | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+                "set -eu; rm -rf '$release'; mkdir -p '$release'; tar -xzf - -C '$release'; chmod +x '$release/HotaTwitch.Api'"
+
+      - name: Switch current and restart the service
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          release="$RELEASE_ROOT/$GITHUB_SHA"
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -eu; ln -sfnT '$release' '$CURRENT_LINK'; sudo systemctl restart hota-twitch"
+
+      - name: Wait for the service to answer
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS --max-time 5 "$HEALTH_URL" | grep -q '"ok":true'; then
+              echo "healthy after $attempt attempt(s)"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::$HEALTH_URL did not report {\"ok\":true} within 60 s"
+          exit 1
+
+      - name: Drop the oldest releases
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -eu; cd '$RELEASE_ROOT'; ls -1t | tail -n +$((KEPT_RELEASES + 1)) | xargs -r rm -rf"
