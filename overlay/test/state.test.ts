@@ -80,3 +80,28 @@ describe('state decoding', () => {
     expect(decodeJson('{').ok).toBe(false);
   });
 });
+
+describe('no game loaded', () => {
+  it('accepts a document with no player and no entries', () => {
+    const result = decode({
+      v: 1,
+      ts: 1788907728157,
+      screen: 'none',
+      date: { day: 1, week: 1, month: 1 },
+      display: { width: 1920, height: 1080 },
+      player: null,
+      heroes: [],
+      towns: [],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.ok && result.state.player).toBeNull();
+  });
+
+  it('still rejects a player that is neither an object nor null', () => {
+    const document = valid();
+    document['player'] = 7;
+
+    expect(decode(document).ok).toBe(false);
+  });
+});

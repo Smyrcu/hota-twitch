@@ -48,7 +48,7 @@ function zonesForList(
 
 /** Hover targets over the panel's hero and town lists. Empty unless the adventure map is shown. */
 export function computeZones(state: GameState, player: Size): Zone[] {
-  if (state.screen !== 'adventure') return [];
+  if (state.screen !== 'adventure' || state.player === null) return [];
   if (player.width <= 0 || player.height <= 0) return [];
   return [
     ...zonesForList('hero', HERO_LIST, state, player, state.player.heroListTop, state.heroes.length),

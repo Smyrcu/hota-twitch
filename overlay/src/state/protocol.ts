@@ -78,7 +78,8 @@ export interface GameState {
   readonly screen: ScreenName;
   readonly date: GameDate;
   readonly display: Display;
-  readonly player: Player;
+  /** Null when `screen` is `none`: no game is loaded. */
+  readonly player: Player | null;
   readonly heroes: readonly Hero[];
   readonly towns: readonly Town[];
 }

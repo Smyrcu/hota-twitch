@@ -41,7 +41,7 @@ describe('broadcast receiver', () => {
     await receiver.handle(encoded);
 
     expect(states).toHaveLength(1);
-    expect(states[0]?.player.name).toBe('HaveFunMate');
+    expect(states[0]?.player?.name).toBe('HaveFunMate');
   });
 
   it('holds the state for the broadcaster latency so it matches the video', async () => {

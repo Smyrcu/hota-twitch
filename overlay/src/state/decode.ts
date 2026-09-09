@@ -186,7 +186,7 @@ function decodeState(value: unknown): GameState {
     screen: decodeScreen(raw['screen'], 'state.screen'),
     date: decodeDate(raw['date'], 'state.date'),
     display: decodeDisplay(raw['display'], 'state.display'),
-    player: decodePlayer(raw['player'], 'state.player'),
+    player: optional(raw['player'], 'state.player', decodePlayer),
     heroes: list(raw['heroes'], 'state.heroes', decodeHero),
     towns: list(raw['towns'], 'state.towns', decodeTown),
   };
