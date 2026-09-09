@@ -52,6 +52,24 @@ int guildSlotCount(int slotsAvailable)
     return slotsAvailable > kGuildSlotsPerTier ? kGuildSlotsPerTier : slotsAvailable;
 }
 
+int reportedSpellIndex(const GuildTierSpells& tierSpells, int slotCount, int rawSlot)
+{
+    const int slots = guildSlotCount(slotCount);
+    if (rawSlot < 0 || rawSlot >= slots || tierSpells[static_cast<std::size_t>(rawSlot)] < 0)
+    {
+        return -1;
+    }
+    int index = 0;
+    for (int slot = 0; slot < rawSlot; ++slot)
+    {
+        if (tierSpells[static_cast<std::size_t>(slot)] >= 0)
+        {
+            ++index;
+        }
+    }
+    return index;
+}
+
 bool findResearchSlot(const GuildSlotStates& states, GuildSlot& out)
 {
     bool found = false;

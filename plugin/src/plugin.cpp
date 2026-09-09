@@ -28,8 +28,9 @@ std::string readFile(const std::string& path)
 
 Plugin& Plugin::instance()
 {
-    static Plugin plugin;
-    return plugin;
+    // Deliberately never deleted; see the note on the class.
+    static Plugin* const plugin = new Plugin();
+    return *plugin;
 }
 
 void Plugin::initialise(HMODULE module)

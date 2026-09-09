@@ -2,6 +2,8 @@
 
 #include "core/town_rules.hpp"
 
+#include <initializer_list>
+
 using namespace hota_twitch;
 
 namespace
@@ -25,6 +27,18 @@ GuildSlotStates statesWithRealSlots()
         }
     }
     return states;
+}
+
+GuildTierSpells tierWith(std::initializer_list<std::int32_t> spells)
+{
+    GuildTierSpells tier{};
+    tier.fill(-1);
+    std::size_t index = 0;
+    for (const std::int32_t spell : spells)
+    {
+        tier[index++] = spell;
+    }
+    return tier;
 }
 
 } // namespace
@@ -111,4 +125,51 @@ HOTA_TEST(the_first_researched_slot_wins_when_several_are_marked)
     HOTA_CHECK(findResearchSlot(states, found));
     HOTA_CHECK_EQ(found.tier, 1);
     HOTA_CHECK_EQ(found.slot, 2);
+}
+
+HOTA_TEST(a_full_tier_reports_slots_at_their_own_index)
+{
+    const GuildTierSpells tier = tierWith({15, 27, 38, 9, 36});
+
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 5, 0), 0);
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 5, 3), 3);
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 5, 4), 4);
+}
+
+HOTA_TEST(an_empty_slot_before_the_researched_one_shifts_its_index)
+{
+    // The list the plugin sends holds only filled slots, so raw slot 3 is the second entry.
+    GuildTierSpells tier = tierWith({15, -1, -1, 38});
+
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 4, 3), 1);
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 4, 0), 0);
+}
+
+HOTA_TEST(a_slot_the_tier_does_not_have_is_not_reported)
+{
+    const GuildTierSpells tier = tierWith({15, 27});
+
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 2, 2), -1);
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 2, 5), -1);
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 0, 0), -1);
+}
+
+HOTA_TEST(an_empty_slot_is_not_reported_because_it_is_not_in_the_list)
+{
+    const GuildTierSpells tier = tierWith({15, -1, 38});
+
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 3, 1), -1);
+}
+
+HOTA_TEST(a_negative_raw_slot_is_rejected)
+{
+    HOTA_CHECK_EQ(reportedSpellIndex(tierWith({15}), 5, -1), -1);
+}
+
+HOTA_TEST(the_library_slot_counts_as_a_real_slot)
+{
+    // A Tower with a Library has six slots on the first tier.
+    const GuildTierSpells tier = tierWith({15, 27, 38, 9, 36, 55});
+
+    HOTA_CHECK_EQ(reportedSpellIndex(tier, 6, 5), 5);
 }

@@ -56,13 +56,17 @@ if(WIN32)
         OUTPUT_NAME "hota-twitch"
     )
     target_link_libraries(hota-twitch PRIVATE hota_twitch_core nh3api winhttp)
+    # NH3API is not ours to hold to our warning level - it describes the game's ABI, which is
+    # full of things a pedantic compiler dislikes. Marking it system lets the plugin's own code
+    # be compiled as strictly as the rest of the repository.
+    target_include_directories(hota-twitch SYSTEM PRIVATE external/NH3API)
     target_sources(hota-twitch PRIVATE src/hota-twitch.def)
 
     if(MSVC)
         target_compile_options(hota-twitch PRIVATE /W4 /WX /permissive-)
     else()
         target_compile_options(hota-twitch PRIVATE
-            -Wall -Wextra -Werror -ffunction-sections -fdata-sections)
+            -Wall -Wextra -Wpedantic -Werror -ffunction-sections -fdata-sections)
         # The streamer copies one file next to the game, so nothing may be left to find at
         # load time: link the GCC, C++ and pthread runtimes into the DLL. Statically linking
         # them is also what makes dropping the unused parts and the symbols worthwhile - it

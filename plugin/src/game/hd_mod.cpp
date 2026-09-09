@@ -25,15 +25,15 @@ const Patcher* patcher()
     return instance;
 }
 
-void logSettingsFile(Logger& log, const std::string& path, int& budget)
+void collectSettingsFile(const std::string& path, std::string& into, int& budget)
 {
     std::ifstream file(path);
     if (!file)
     {
-        log.debug("hd mod: cannot open " + path);
+        into += "\n  cannot open " + path;
         return;
     }
-    log.debug("hd mod: settings from " + path);
+    into += "\n  [" + path + "]";
     std::string line;
     while (budget > 0 && std::getline(file, line))
     {
@@ -41,26 +41,29 @@ void logSettingsFile(Logger& log, const std::string& path, int& budget)
         {
             continue;
         }
-        log.debug("hd mod:   " + line);
+        into += "\n    " + line;
         --budget;
     }
 }
 
-void logSettingsDirectory(Logger& log, const std::string& directory)
+/// Gathers the settings into one string rather than logging a line at a time: this runs on the
+/// game thread inside a redraw, and every write to the log is a flush to disk.
+std::string collectSettings(const std::string& directory)
 {
     WIN32_FIND_DATAA entry{};
     const HANDLE search = FindFirstFileA((directory + "\\*.ini").c_str(), &entry);
     if (search == INVALID_HANDLE_VALUE)
     {
-        log.debug("hd mod: no ini files under " + directory);
-        return;
+        return "\n  no ini files under " + directory;
     }
+    std::string collected;
     int budget = kMaxSettingLinesLogged;
     do
     {
-        logSettingsFile(log, directory + "\\" + entry.cFileName, budget);
+        collectSettingsFile(directory + "\\" + entry.cFileName, collected, budget);
     } while (budget > 0 && FindNextFileA(search, &entry) != 0);
     FindClose(search);
+    return collected;
 }
 
 } // namespace
@@ -91,6 +94,12 @@ void HdMod::logSettingsOnce()
         return;
     }
     m_logged = true;
+    // Reading every settings file is only worth doing if the streamer will see the result;
+    // at any other level this would be file I/O on the game thread for nothing.
+    if (!m_log.enabled(LogLevel::Debug))
+    {
+        return;
+    }
 
     const Patcher* const p = patcher();
     if (p == nullptr || !isHDModPresent(p))
@@ -100,22 +109,25 @@ void HdMod::logSettingsOnce()
     }
 
     const char* const version = getHDModVersionString(p);
-    m_log.debug(std::string("hd mod: version ") + (version != nullptr ? version : "unknown") +
-                (isHDPlusPresent(p) ? ", HD+ on" : ", HD+ off"));
-
     const TPoint resolution = getHDModResolution(p);
-    m_log.debug("hd mod: HD.Rez " + std::to_string(resolution.x) + "x" +
-                std::to_string(resolution.y) + ", game resolution field " +
-                std::to_string(readAbsolute<std::int32_t>(layout::kScreenWidthAddress)) + "x" +
-                std::to_string(readAbsolute<std::int32_t>(layout::kScreenHeightAddress)));
+    std::string report = "hd mod: version ";
+    report += version != nullptr ? version : "unknown";
+    report += isHDPlusPresent(p) ? ", HD+ on" : ", HD+ off";
+    report += "\n  HD.Rez " + std::to_string(resolution.x) + "x" + std::to_string(resolution.y);
+    report += ", game resolution field " +
+              std::to_string(readAbsolute<std::int32_t>(layout::kScreenWidthAddress)) + "x" +
+              std::to_string(readAbsolute<std::int32_t>(layout::kScreenHeightAddress));
 
     const char* const directory = getHDModDirectory(p);
     if (directory == nullptr)
     {
-        m_log.debug("hd mod: the mod does not say where _HD3_Data lives");
-        return;
+        report += "\n  the mod does not say where _HD3_Data lives";
     }
-    logSettingsDirectory(m_log, std::string(directory) + "\\Settings");
+    else
+    {
+        report += collectSettings(std::string(directory) + "\\Settings");
+    }
+    m_log.debug(report);
 }
 
 } // namespace hota_twitch::game

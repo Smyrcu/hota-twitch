@@ -6,6 +6,8 @@
 
 #include <windows.h>
 
+#include <atomic>
+
 namespace hota_twitch::game
 {
 namespace
@@ -20,15 +22,18 @@ constexpr unsigned long kMinimumIntervalMs = 300;
 constexpr const char* kPatcherOwner = "HD.Plugin.hota-twitch";
 
 /// The hooks are C function pointers, so the instance they belong to has to be reachable
-/// without an argument. Exactly one Hooks object exists for the life of the process.
-Hooks* g_hooks = nullptr;
+/// without an argument. Exactly one Hooks object exists for the life of the process; it is
+/// published from the thread that installs the hooks and read from the game thread, hence
+/// the atomic.
+std::atomic<Hooks*> g_hooks{nullptr};
 
 void __stdcall onAdventureUpdate(HiHook* hook, void* self, int drawWindow, int update)
 {
     THISCALL_3(void, hook->GetOriginalFunc(), self, drawWindow, update);
-    if (g_hooks != nullptr)
+    Hooks* const hooks = g_hooks.load(std::memory_order_acquire);
+    if (hooks != nullptr)
     {
-        g_hooks->snapshotIfDue();
+        hooks->snapshotIfDue();
     }
 }
 
@@ -36,9 +41,10 @@ std::int32_t __stdcall onAddManager(HiHook* hook, void* self, void* manager, std
 {
     const std::int32_t result =
         THISCALL_3(std::int32_t, hook->GetOriginalFunc(), self, manager, priority);
-    if (g_hooks != nullptr)
+    Hooks* const hooks = g_hooks.load(std::memory_order_acquire);
+    if (hooks != nullptr)
     {
-        g_hooks->snapshot();
+        hooks->snapshotIfScreenChanged();
     }
     return result;
 }
@@ -46,9 +52,10 @@ std::int32_t __stdcall onAddManager(HiHook* hook, void* self, void* manager, std
 void __stdcall onRemoveManager(HiHook* hook, void* self, void* manager)
 {
     THISCALL_2(void, hook->GetOriginalFunc(), self, manager);
-    if (g_hooks != nullptr)
+    Hooks* const hooks = g_hooks.load(std::memory_order_acquire);
+    if (hooks != nullptr)
     {
-        g_hooks->snapshot();
+        hooks->snapshotIfScreenChanged();
     }
 }
 
@@ -57,14 +64,6 @@ void __stdcall onRemoveManager(HiHook* hook, void* self, void* manager)
 Hooks::Hooks(Logger& log, Reader& reader, SnapshotSink& sink)
     : m_log(log), m_reader(reader), m_sink(sink)
 {
-}
-
-Hooks::~Hooks()
-{
-    if (g_hooks == this)
-    {
-        g_hooks = nullptr;
-    }
 }
 
 bool Hooks::install()
@@ -85,10 +84,11 @@ bool Hooks::install()
         return false;
     }
 
-    g_hooks = this;
+    g_hooks.store(this, std::memory_order_release);
     instance->WriteHiHook(layout::kAdvManagerUpdateScreen, SPLICE_, EXTENDED_, THISCALL_,
                           &onAdventureUpdate);
-    instance->WriteHiHook(layout::kExecutiveAddManager, SPLICE_, EXTENDED_, THISCALL_, &onAddManager);
+    instance->WriteHiHook(layout::kExecutiveAddManager, SPLICE_, EXTENDED_, THISCALL_,
+                          &onAddManager);
     instance->WriteHiHook(layout::kExecutiveRemoveManager, SPLICE_, EXTENDED_, THISCALL_,
                           &onRemoveManager);
     m_installed = true;
@@ -105,15 +105,20 @@ void Hooks::snapshot()
     m_takingSnapshot = true;
     m_lastSnapshotTicks = GetTickCount();
     // The game has no idea what a C++ exception is: whatever goes wrong while reading, the
-    // game thread has to come back out of here and carry on.
+    // game thread has to come back out of here and carry on. The handlers log a fixed string
+    // and nothing else - building a message would allocate, and running out of memory is the
+    // likeliest reason to be in here at all.
     try
     {
         m_reader.read(m_building);
+        // The gate below compares against the screen the game is on, not the one the document
+        // reports: a loaded game with no local human in it is reported as no game at all.
+        m_lastScreen = m_reader.currentScreen();
         m_sink.publish(m_building);
     }
-    catch (const std::exception& error)
+    catch (const std::bad_alloc&)
     {
-        m_log.error(std::string("taking a snapshot failed: ") + error.what());
+        m_log.error("out of memory while taking a snapshot");
     }
     catch (...)
     {
@@ -127,6 +132,15 @@ void Hooks::snapshotIfDue()
     // GetTickCount wraps every 49 days; unsigned subtraction keeps the difference right
     // across the wrap.
     if (GetTickCount() - m_lastSnapshotTicks < kMinimumIntervalMs)
+    {
+        return;
+    }
+    snapshot();
+}
+
+void Hooks::snapshotIfScreenChanged()
+{
+    if (m_takingSnapshot || m_reader.currentScreen() == m_lastScreen)
     {
         return;
     }

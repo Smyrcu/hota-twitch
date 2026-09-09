@@ -27,6 +27,11 @@ public:
 
     virtual void write(LogLevel level, std::string_view message) = 0;
 
+    /// Whether a message at this level would be kept. Callers use it to skip building a
+    /// message that would only be thrown away - which matters where the message is expensive,
+    /// as the HD Mod settings dump is.
+    virtual bool enabled(LogLevel level) const = 0;
+
     void error(std::string_view message) { write(LogLevel::Error, message); }
     void warn(std::string_view message) { write(LogLevel::Warn, message); }
     void info(std::string_view message) { write(LogLevel::Info, message); }

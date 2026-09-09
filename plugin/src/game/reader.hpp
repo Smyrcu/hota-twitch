@@ -21,9 +21,13 @@ public:
     /// Replaces the contents of `state` with what the game holds right now.
     void read(StateSnapshot& state);
 
+    /// Which screen the game is showing. Cheap: a handful of pointer comparisons, and no
+    /// game data is touched - the manager hooks use it to decide whether a full read is worth
+    /// doing at all.
+    Screen currentScreen() const;
+
 private:
     const playerData* findStreamer() const;
-    Screen readScreen() const;
     void readPanelScroll(PlayerSnapshot& player) const;
     void readHeroes(const playerData& player, std::vector<HeroSnapshot>& heroes);
     void readTowns(const playerData& player, std::vector<TownSnapshot>& towns);

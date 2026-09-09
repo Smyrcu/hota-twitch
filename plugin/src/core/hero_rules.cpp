@@ -1,6 +1,7 @@
 #include "hero_rules.hpp"
 
 #include <algorithm>
+#include <array>
 #include <utility>
 
 namespace hota_twitch
@@ -29,7 +30,10 @@ bool isReportedArtifactSlot(int slot)
 void collectSkills(const SecondarySkillLevels& levels, const SecondarySkillOrder& order,
                    std::vector<SkillEntry>& out)
 {
-    std::vector<std::pair<std::uint8_t, SkillEntry>> learned;
+    // A hero can hold at most one of each secondary skill, so the working set fits on the
+    // stack. It has to: this runs on the game thread, once per hero, several times a second.
+    std::array<std::pair<std::uint8_t, SkillEntry>, kSecondarySkillCount> learned{};
+    std::size_t count = 0;
     for (int id = 0; id < kSecondarySkillCount; ++id)
     {
         const std::int8_t level = levels[static_cast<std::size_t>(id)];
@@ -37,16 +41,16 @@ void collectSkills(const SecondarySkillLevels& levels, const SecondarySkillOrder
         {
             continue;
         }
-        learned.emplace_back(order[static_cast<std::size_t>(id)], SkillEntry{id, level});
+        learned[count++] = {order[static_cast<std::size_t>(id)], SkillEntry{id, level}};
     }
-    std::stable_sort(learned.begin(), learned.end(),
+    const auto last = learned.begin() + static_cast<std::ptrdiff_t>(count);
+    std::stable_sort(learned.begin(), last,
                      [](const auto& a, const auto& b) { return a.first < b.first; });
 
     out.clear();
-    out.reserve(learned.size());
-    for (const auto& [slot, skill] : learned)
+    for (auto entry = learned.begin(); entry != last; ++entry)
     {
-        out.push_back(skill);
+        out.push_back(entry->second);
     }
 }
 

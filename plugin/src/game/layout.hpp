@@ -58,7 +58,9 @@ inline constexpr std::uintptr_t kTownManagerPointer = 0x69954C;
 /// shows, and this is the function the game calls to fill that popup in (H3API's
 /// `H3Hero::ShowPSkillInfo` passes its result straight to the message box). The `stats` array
 /// at hero + 0x476 is not it: NH3API's `GetPrimarySkill` only clamps that raw field.
-/// Source: H3API (~/hota-native-banks/third_party/H3API), `THISCALL_2(INT32, 0x5BE240, this, primary)`.
+/// Source: H3API by RoseKavalier (https://github.com/RoseKavalier/H3API), which declares it as
+/// `THISCALL_2(INT32, 0x5BE240, this, primary)`. Like every other game function the plugin
+/// calls, the address is SoD 3.2 and unconfirmed on HotA 1.8 until the live check.
 inline constexpr std::uintptr_t kHeroGetPrimary = 0x5BE240;
 
 /// Functions the plugin hooks. All three are __thiscall.

@@ -80,6 +80,12 @@ and therefore could not scroll the hero list at all: consistent with `topHero`, 
 Both are read as raw INT32 at an offset rather than through the NH3API member, and both are
 range-checked (`0 <= value < 48`); anything else is reported as 0.
 
+The window itself is the risk, not the values. The manager hooks fire the moment the adventure
+manager is torn down - quitting to the menu, loading a game - and at that point `gpAdvManager`
+can still be set while its window is already freed. So the scroll is read only while the
+adventure screen is the one the executive has on top, and only after `VirtualQuery` confirms
+the bytes behind the pointer are still there.
+
 ### Town manager - `0x69954C`
 
 The manager the executive holds while a town window is open. NH3API exposes the adventure and
@@ -95,6 +101,12 @@ read from:
 |---|---|---|
 | `+0x10` | INT32[5][6] | slot states: 0 the tier has no such slot, 1 an ordinary spell, 2 a spell being researched |
 | `+0xA4` | INT32 | rolls made on the slot currently under research; -1 once the research is closed |
+
+The slot number in the record is the game's own, and `docs/protocol.md` wants the index into
+the list the plugin actually sends for that tier - which holds only the tier's real, filled
+slots. The two are not the same number whenever a slot before it is empty, so the plugin
+translates one into the other and reports no research at all when the researched slot is not in
+that list (an unbuilt tier, or an empty slot).
 
 Found by the spike on 2026-09-09 by diffing memory across a research roll, and confirmed with
 the owner: rolling Town Portal into a slot and accepting it moved the counter as expected, and

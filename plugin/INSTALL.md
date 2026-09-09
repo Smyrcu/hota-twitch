@@ -66,9 +66,9 @@ to `hota-twitch.log`, next to the DLL. Open it and look at the last lines.
 | What the log says | What to do |
 |---|---|
 | `hota-twitch.ini has no [backend] token` | Paste the token into the ini, step 3. |
-| `the backend does not know this token` | Generate a new token on the Configure page and paste that one. |
+| `the backend does not know this token` | Generate a new token on the Configure page and paste that one, then restart the game. |
 | `the HD Mod patcher is not loaded yet` | The plugin was loaded before the HD Mod. Once step 4 is settled this should not happen; report it if it does. |
-| `no connection to https://...` | The backend could not be reached. Check that you are online; the plugin retries on its own. |
+| `no connection to https://...` | The backend could not be reached. Check that you are online - the plugin keeps retrying, waiting longer between attempts, and picks up on its own once the connection is back. |
 | Nothing at all in the log | The DLL was not loaded. See step 4. |
 
 For more detail, set `level = debug` in the `[log]` section and start the game again. The debug

@@ -42,10 +42,10 @@ void FileLogger::write(LogLevel level, std::string_view message)
     m_file.flush();
 }
 
-void FileLogger::setLevel(LogLevel level)
+bool FileLogger::enabled(LogLevel level) const
 {
     const std::lock_guard<std::mutex> lock(m_mutex);
-    m_level = level;
+    return level <= m_level && m_file.is_open();
 }
 
 } // namespace hota_twitch::platform

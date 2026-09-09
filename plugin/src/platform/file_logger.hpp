@@ -19,13 +19,12 @@ public:
 
     void write(LogLevel level, std::string_view message) override;
 
-    /// Raises or lowers the level once the configuration has been read.
-    void setLevel(LogLevel level);
+    bool enabled(LogLevel level) const override;
 
 private:
-    std::mutex m_mutex;
+    mutable std::mutex m_mutex;
     std::ofstream m_file;
-    LogLevel m_level;
+    const LogLevel m_level;
 };
 
 } // namespace hota_twitch::platform

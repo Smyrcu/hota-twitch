@@ -80,15 +80,18 @@ void Reader::read(StateSnapshot& state)
     }
 
     m_hdMod.logSettingsOnce();
-    state.screen = readScreen();
     state.display = m_hdMod.display();
     state.date = {gpGame->day, gpGame->week, gpGame->month};
 
+    // `docs/protocol.md` ties the two together: `player` is null exactly when `screen` is
+    // "none". A loaded game with no local human in it is not a game this plugin has anything
+    // to say about, so it is reported as no game rather than as a screen with no player.
     const playerData* const streamer = findStreamer();
     if (streamer == nullptr)
     {
         return;
     }
+    state.screen = currentScreen();
 
     PlayerSnapshot player;
     player.id = streamer->color;
@@ -122,7 +125,7 @@ const playerData* Reader::findStreamer() const
 
 /// The executive keeps the open managers as a list; the one at the tail owns the screen.
 /// Its `currentManager` is only set while a message is being handled, so it is useless here.
-Screen Reader::readScreen() const
+Screen Reader::currentScreen() const
 {
     if (gpExec == nullptr || gpExec->tailManager == nullptr)
     {
@@ -144,13 +147,21 @@ Screen Reader::readScreen() const
     return Screen::Other;
 }
 
+/// The adventure window only exists while the adventure manager owns the screen. The manager
+/// hooks fire the moment it is torn down - quitting to the menu, loading a game - and
+/// `gpAdvManager` can still be set with its window already freed, so the scroll is read only
+/// while that screen is up, and only after the pages behind the pointer are confirmed present.
 void Reader::readPanelScroll(PlayerSnapshot& player) const
 {
-    if (gpAdvManager == nullptr || !looksLikePointer(gpAdvManager->advWindow))
+    if (currentScreen() != Screen::Adventure || gpAdvManager == nullptr)
     {
         return;
     }
     const void* const window = gpAdvManager->advWindow;
+    if (!isReadable(window, layout::kAdvWindowTopTown + sizeof(std::int32_t)))
+    {
+        return;
+    }
     player.heroListTop = readListTop(window, layout::kAdvWindowTopHero);
     player.townListTop = readListTop(window, layout::kAdvWindowTopTown);
 }
@@ -323,12 +334,29 @@ void Reader::readResearch(const town& source, TownSnapshot& out) const
     {
         return;
     }
+    if (source.mageLevel < slot.tier + 1)
+    {
+        // Research on a tier the guild has not been built up to: the tier is reported empty,
+        // so there is no slot for the consumer to point at.
+        return;
+    }
+    GuildTierSpells tierSpells{};
+    for (std::size_t index = 0; index < tierSpells.size(); ++index)
+    {
+        tierSpells[index] = source.townSpells[static_cast<std::size_t>(slot.tier)][index];
+    }
+    const int reported = reportedSpellIndex(
+        tierSpells, source.maxTownSpellAvailable[static_cast<std::size_t>(slot.tier)], slot.slot);
+    if (reported < 0)
+    {
+        return;
+    }
+
     const std::int32_t rolls = readAt<std::int32_t>(record, layout::kHotaExtensionRollCount);
     Research research;
     research.level = slot.tier + 1;
-    research.slot = slot.slot;
-    research.spell = source.townSpells[static_cast<std::size_t>(slot.tier)]
-                                      [static_cast<std::size_t>(slot.slot)];
+    research.slot = reported;
+    research.spell = tierSpells[static_cast<std::size_t>(slot.slot)];
     research.rolls = rolls > 0 ? rolls : 0;
     out.research = research;
 }
