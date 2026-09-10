@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using AwesomeAssertions;
 using HotaTwitch.Application.Abstractions;
 using HotaTwitch.Application.Broadcasting;
@@ -28,7 +29,8 @@ public sealed class IngestStateHandlerTests
 
     public IngestStateHandlerTests()
     {
-        channel = Channel.Create(ChannelIdentifier, token, Now);
+        channel = Channel.Create(ChannelIdentifier, Now);
+        channel.RotateToken(token);
         coalescer = new BroadcastCoalescer(publisher, clock, NullLogger<BroadcastCoalescer>.Instance);
         handler = new IngestStateHandler(channels, rateLimiter, coalescer, clock, NullLogger<IngestStateHandler>.Instance);
 
@@ -169,6 +171,72 @@ public sealed class IngestStateHandlerTests
 
         outcome.Should().Be(IngestOutcome.Accepted);
         await publisher.DidNotReceiveWithAnyArgs().PublishAsync(Arg.Any<ChannelId>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_DocumentWithoutAScale_BroadcastsTheChannelsScale()
+    {
+        ChannelSettings.TryCreate(1.5m, out var settings).Should().BeTrue();
+        channel.UpdateSettings(settings!);
+
+        await HandleAsync(token.Value, StateDocuments.WithoutUiScale());
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        await ReceivedBroadcastWithScaleAsync(1.5m);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DocumentWithoutADisplay_BroadcastsTheChannelsScale()
+    {
+        ChannelSettings.TryCreate(2m, out var settings).Should().BeTrue();
+        channel.UpdateSettings(settings!);
+
+        await HandleAsync(token.Value, StateDocuments.WithoutDisplay());
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        await ReceivedBroadcastWithScaleAsync(2m);
+    }
+
+    [Fact]
+    public async Task HandleAsync_DocumentThatCarriesAScale_BroadcastsItUntouched()
+    {
+        ChannelSettings.TryCreate(4m, out var settings).Should().BeTrue();
+        channel.UpdateSettings(settings!);
+
+        await HandleAsync(token.Value, StateDocuments.Valid());
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        await publisher.Received(1).PublishAsync(
+            ChannelIdentifier,
+            Arg.Is<string>(message => Decoded(message) == StateDocuments.Text()),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task HandleAsync_ChannelThatNeverConfiguredAScale_BroadcastsThePixelExactDefault()
+    {
+        await HandleAsync(token.Value, StateDocuments.WithoutUiScale());
+        await coalescer.PublishDueAsync(TestContext.Current.CancellationToken);
+
+        await ReceivedBroadcastWithScaleAsync(ChannelSettings.Default.UiScale);
+    }
+
+    private Task ReceivedBroadcastWithScaleAsync(decimal uiScale) =>
+        publisher.Received(1).PublishAsync(
+            ChannelIdentifier,
+            Arg.Is<string>(message => UiScaleOf(message) == uiScale),
+            Arg.Any<CancellationToken>());
+
+    /// <summary>The scale a broadcast carries, or <see langword="null"/> when it carries none.</summary>
+    private static decimal? UiScaleOf(string message)
+    {
+        using var parsed = JsonDocument.Parse(Decoded(message));
+
+        return parsed.RootElement.TryGetProperty("display", out var display) &&
+               display.TryGetProperty("uiScale", out var scale) &&
+               scale.ValueKind is JsonValueKind.Number
+            ? scale.GetDecimal()
+            : null;
     }
 
     private Task<IngestOutcome> HandleAsync(string? bearer, ReadOnlyMemory<byte> document) =>

@@ -53,13 +53,14 @@ public sealed class IngestStateHandler(
             return IngestOutcome.UnknownToken;
         }
 
-        if (BroadcastMessage.TryEncode(command.Document.Span, out var message))
+        var relayed = StateDocumentScale.WithUiScale(command.Document, channel.Settings.UiScale);
+        if (BroadcastMessage.TryEncode(relayed.Span, out var message))
         {
             coalescer.Submit(channel.Id, message);
         }
         else
         {
-            IngestStateLog.MessageTooLargeToBroadcast(logger, channel.Id.Value, command.Document.Length);
+            IngestStateLog.MessageTooLargeToBroadcast(logger, channel.Id.Value, relayed.Length);
         }
 
         return IngestOutcome.Accepted;

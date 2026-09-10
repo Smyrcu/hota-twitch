@@ -13,4 +13,8 @@ internal static class StateDocuments
           """;
 
     public static byte[] Bytes(long timestamp = 1788907728157) => Encoding.UTF8.GetBytes(Text(timestamp));
+
+    /// <summary>What a producer posts when it cannot read the HD Mod interface scale.</summary>
+    public static byte[] WithoutUiScale() =>
+        Encoding.UTF8.GetBytes(Text().Replace(",\"uiScale\":1", string.Empty, StringComparison.Ordinal));
 }

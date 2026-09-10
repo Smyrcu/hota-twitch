@@ -37,7 +37,15 @@ dotnet run --project src/HotaTwitch.Api
 (selected in `global.json`), so run `dotnet test` bare; `--filter` and `--nologo` belong to the
 VSTest runner and confuse this one.
 
-Migrations are applied at startup, so the first run creates the database file. To add one:
+Migrations are applied at startup, so the first run creates the database file. SQLite cannot alter a
+column in place, so the migration that made `token_hash` optional rebuilds the `channels` table; EF
+logs a warning that the rebuild runs outside a transaction. That migration is effectively one-way:
+reverting it makes the column non-nullable again, and every channel that has no token would then
+collide on the unique index. The same asymmetry applies to the binary — a release from before the
+token became optional cannot read a channel that has since dropped its token, and answers 500 for
+that streamer's configuration page.
+
+To add a migration:
 
 ```bash
 cd backend
@@ -69,7 +77,9 @@ the repository.
 endpoints are called from the configuration page that Twitch serves at
 `https://<client-id>.ext-twitch.tv`, which makes every one of them cross-origin, and the
 `Authorization` header turns them into preflighted requests. Only that origin, plus anything
-`TWITCH_ALLOWED_ORIGINS` adds, is allowed, and only for GET, POST and DELETE.
+`TWITCH_ALLOWED_ORIGINS` adds, is allowed, and only for GET, POST, PUT and DELETE. `PUT
+/v1/config/settings` carries a JSON body, so `Content-Type` is allowed alongside `Authorization`;
+without it the browser refuses the preflight and the streamer's change never reaches the service.
 
 ## How a streamer gets connected
 
@@ -82,10 +92,29 @@ endpoints are called from the configuration page that Twitch serves at
 4. The plugin posts the state to `POST /v1/state` with that token as a bearer credential. The
    backend hashes what it receives and looks the channel up by the hash, so the plain token
    exists only in the streamer's file.
-5. `GET /v1/config/channel` answers `hasToken`, `tokenHint` and `lastStateAt`, which is what the
-   configuration page shows as the connection status.
-6. `DELETE /v1/config/token` forgets the channel altogether. Without a token there is nothing
-   left to relay.
+5. `GET /v1/config/channel` answers `hasToken`, `tokenHint`, `lastStateAt` and `settings`, which is
+   what the configuration page shows as the connection status.
+6. `DELETE /v1/config/token` unbinds the token. The channel keeps its settings, so a streamer who
+   generates a new token finds the interface scale they configured still there. What goes with the
+   token is `lastStateAt`: no state can arrive any more, so reporting the last one would be
+   misleading.
+
+## Channel settings
+
+`PUT /v1/config/settings` stores what the streamer configured for their channel; today that is
+`uiScale`, the HD Mod interface scale they play with. A scale outside 1 to 4, or one with more than
+two decimals, is refused with 400 and nothing is stored.
+
+Settings belong to the channel rather than to its streamer token. A channel row therefore exists as
+soon as the streamer configures anything — before any token has been issued — and it outlives the
+token being cleared. `token_hash` is nullable for that reason; SQLite treats NULLs in a unique index
+as distinct, so the index that keeps two channels from sharing a token still holds while any number
+of channels carry no token at all.
+
+The scale reaches viewers through the state document. A producer that cannot read the interface
+scale leaves `display.uiScale` out, and ingest fills the channel's value in before the document is
+broadcast. A scale the producer did send is never touched, and neither is a document shaped in a way
+the service cannot edit with confidence: those are relayed byte for byte as posted.
 
 ## What the service enforces
 

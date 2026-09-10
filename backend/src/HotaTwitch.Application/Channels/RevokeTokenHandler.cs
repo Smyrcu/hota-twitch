@@ -6,9 +6,8 @@ using Microsoft.Extensions.Logging;
 namespace HotaTwitch.Application.Channels;
 
 /// <summary>
-/// Drops a channel's token. The channel row goes with it: without a token there is nothing left
-/// to relay, and the configuration page reports the channel as unconfigured again. Anything the
-/// channel still had waiting is dropped too, so no broadcast outlives the token.
+/// Unbinds a channel's streamer token and drops anything the channel still had waiting, so no
+/// broadcast outlives the token.
 /// </summary>
 public sealed class RevokeTokenHandler(
     IChannelRepository channels,
@@ -17,9 +16,15 @@ public sealed class RevokeTokenHandler(
 {
     public async Task HandleAsync(ChannelId channelId, CancellationToken cancellationToken)
     {
-        await channels.RemoveAsync(channelId, cancellationToken);
+        var channel = await channels.FindByIdAsync(channelId, cancellationToken);
+        if (channel is not null)
+        {
+            channel.ClearToken();
+            await channels.SaveAsync(channel, cancellationToken);
+            RevokeTokenLog.TokenRevoked(logger, channelId.Value);
+        }
+
         coalescer.Forget(channelId);
-        RevokeTokenLog.TokenRevoked(logger, channelId.Value);
     }
 }
 

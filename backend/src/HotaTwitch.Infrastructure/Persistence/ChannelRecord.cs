@@ -5,11 +5,13 @@ internal sealed class ChannelRecord
 {
     public required string ChannelId { get; set; }
 
-    public required string TokenHash { get; set; }
+    public string? TokenHash { get; set; }
 
-    public required string TokenHint { get; set; }
+    public string? TokenHint { get; set; }
 
     public required DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? LastStateAt { get; set; }
+
+    public required decimal UiScale { get; set; }
 }

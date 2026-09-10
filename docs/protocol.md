@@ -131,8 +131,8 @@ PUT    /v1/config/settings  <- { "uiScale": 1.5 }        // 1 ≤ uiScale ≤ 4,
 ```
 
 `settings.uiScale` is the HD Mod interface scale the streamer plays with. On ingest the backend
-copies it into `display.uiScale` whenever the producer left the field out, so viewers always
-receive the value the streamer configured.
+copies it into `display.uiScale` whenever the producer left the field out or sent `null`, so
+viewers always receive the value the streamer configured.
 
 Settings belong to the channel, not to the token: `PUT /v1/config/settings` works before a token
 exists (it creates the channel record), `DELETE /v1/config/token` clears only the token and keeps

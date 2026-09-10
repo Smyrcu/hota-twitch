@@ -1,7 +1,10 @@
+using HotaTwitch.Domain.Channels;
+
 namespace HotaTwitch.Application.Channels;
 
 /// <summary>What the configuration page shows about a channel's connection.</summary>
-public sealed record ChannelStatus(bool HasToken, string? TokenHint, DateTimeOffset? LastStateAt)
+public sealed record ChannelStatus(bool HasToken, string? TokenHint, DateTimeOffset? LastStateAt, ChannelSettings Settings)
 {
-    public static ChannelStatus Unconfigured { get; } = new(HasToken: false, TokenHint: null, LastStateAt: null);
+    public static ChannelStatus Unconfigured { get; } =
+        new(HasToken: false, TokenHint: null, LastStateAt: null, ChannelSettings.Default);
 }

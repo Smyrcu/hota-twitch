@@ -24,7 +24,7 @@ public sealed class ChannelConfigurationHandlerTests
         new(publisher, clock, NullLogger<BroadcastCoalescer>.Instance);
 
     [Fact]
-    public async Task IssueToken_ChannelWithoutAToken_CreatesTheChannelAndReturnsThePlainToken()
+    public async Task IssueToken_ChannelWithoutARow_CreatesTheChannelAndReturnsThePlainToken()
     {
         var handler = new IssueTokenHandler(channels, clock, NullLogger<IssueTokenHandler>.Instance);
 
@@ -39,7 +39,7 @@ public sealed class ChannelConfigurationHandlerTests
     [Fact]
     public async Task IssueToken_ChannelThatAlreadyHasAToken_RotatesItAndKeepsCreatedAt()
     {
-        var existing = Channel.Create(ChannelIdentifier, StreamerToken.Generate(), Now);
+        var existing = WithToken(StreamerToken.Generate());
         channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(existing);
         var handler = new IssueTokenHandler(channels, clock, NullLogger<IssueTokenHandler>.Instance);
 
@@ -50,13 +50,41 @@ public sealed class ChannelConfigurationHandlerTests
     }
 
     [Fact]
-    public async Task RevokeToken_Always_RemovesTheChannel()
+    public async Task IssueToken_ChannelThatOnlyHadSettings_KeepsThem()
+    {
+        var existing = Channel.Create(ChannelIdentifier, Now);
+        existing.UpdateSettings(Scale(2.5m));
+        channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(existing);
+        var handler = new IssueTokenHandler(channels, clock, NullLogger<IssueTokenHandler>.Instance);
+
+        await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
+
+        existing.Settings.UiScale.Should().Be(2.5m);
+    }
+
+    [Fact]
+    public async Task RevokeToken_ChannelWithAToken_ClearsTheTokenAndKeepsTheChannel()
+    {
+        var existing = WithToken(StreamerToken.Generate());
+        existing.UpdateSettings(Scale(1.5m));
+        channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(existing);
+        var handler = new RevokeTokenHandler(channels, NewCoalescer(), NullLogger<RevokeTokenHandler>.Instance);
+
+        await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
+
+        existing.HasToken.Should().BeFalse();
+        existing.Settings.UiScale.Should().Be(1.5m);
+        await channels.Received(1).SaveAsync(existing, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task RevokeToken_ChannelThatHasNoRow_WritesNothing()
     {
         var handler = new RevokeTokenHandler(channels, NewCoalescer(), NullLogger<RevokeTokenHandler>.Instance);
 
         await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
 
-        await channels.Received(1).RemoveAsync(ChannelIdentifier, Arg.Any<CancellationToken>());
+        await channels.DidNotReceiveWithAnyArgs().SaveAsync(Arg.Any<Channel>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -75,26 +103,88 @@ public sealed class ChannelConfigurationHandlerTests
     }
 
     [Fact]
-    public async Task GetChannelStatus_UnknownChannel_ReportsNoToken()
+    public async Task GetChannelStatus_UnknownChannel_ReportsNoTokenAndTheDefaultScale()
     {
         var handler = new GetChannelStatusHandler(channels);
 
         var status = await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
 
         status.Should().Be(ChannelStatus.Unconfigured);
+        status.Settings.Should().Be(ChannelSettings.Default);
     }
 
     [Fact]
-    public async Task GetChannelStatus_ConfiguredChannel_ReportsHintAndLastState()
+    public async Task GetChannelStatus_ChannelWithAToken_ReportsHintLastStateAndSettings()
     {
         var token = StreamerToken.Generate();
-        var channel = Channel.Create(ChannelIdentifier, token, Now);
+        var channel = WithToken(token);
+        channel.UpdateSettings(Scale(2m));
         channel.MarkStateReceived(Now.AddMinutes(1));
         channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(channel);
         var handler = new GetChannelStatusHandler(channels);
 
         var status = await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
 
-        status.Should().Be(new ChannelStatus(HasToken: true, token.Hint(), Now.AddMinutes(1)));
+        status.Should().Be(new ChannelStatus(HasToken: true, token.Hint(), Now.AddMinutes(1), Scale(2m)));
+    }
+
+    [Fact]
+    public async Task GetChannelStatus_ChannelWithSettingsButNoToken_StillReportsTheSettings()
+    {
+        var channel = Channel.Create(ChannelIdentifier, Now);
+        channel.UpdateSettings(Scale(3m));
+        channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(channel);
+        var handler = new GetChannelStatusHandler(channels);
+
+        var status = await handler.HandleAsync(ChannelIdentifier, TestContext.Current.CancellationToken);
+
+        status.HasToken.Should().BeFalse();
+        status.TokenHint.Should().BeNull();
+        status.Settings.UiScale.Should().Be(3m);
+    }
+
+    [Fact]
+    public async Task UpdateSettings_ChannelThatHasNoRow_CreatesItCarryingTheScale()
+    {
+        var handler = NewSettingsHandler();
+
+        await handler.HandleAsync(ChannelIdentifier, Scale(1.5m), TestContext.Current.CancellationToken);
+
+        await channels.Received(1).SaveSettingsAsync(
+            Arg.Is<Channel>(saved =>
+                saved.Id == ChannelIdentifier && !saved.HasToken && saved.Settings.UiScale == 1.5m &&
+                saved.CreatedAt == Now),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task UpdateSettings_ChannelWithAToken_KeepsTheToken()
+    {
+        var token = StreamerToken.Generate();
+        var existing = WithToken(token);
+        channels.FindByIdAsync(ChannelIdentifier, Arg.Any<CancellationToken>()).Returns(existing);
+        var handler = NewSettingsHandler();
+
+        await handler.HandleAsync(ChannelIdentifier, Scale(4m), TestContext.Current.CancellationToken);
+
+        existing.Settings.UiScale.Should().Be(4m);
+        existing.TokenHash.Should().Be(token.Hash());
+        await channels.Received(1).SaveSettingsAsync(existing, Arg.Any<CancellationToken>());
+    }
+
+    private UpdateChannelSettingsHandler NewSettingsHandler() =>
+        new(channels, clock, NullLogger<UpdateChannelSettingsHandler>.Instance);
+
+    private static Channel WithToken(StreamerToken token)
+    {
+        var channel = Channel.Create(ChannelIdentifier, Now);
+        channel.RotateToken(token);
+        return channel;
+    }
+
+    private static ChannelSettings Scale(decimal uiScale)
+    {
+        ChannelSettings.TryCreate(uiScale, out var settings).Should().BeTrue();
+        return settings!;
     }
 }

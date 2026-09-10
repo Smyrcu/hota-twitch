@@ -14,4 +14,12 @@ internal static class StateDocuments
           "player":{"id":0,"name":"HaveFunMate","currentHero":184,"heroListTop":0,"townListTop":0},
           "heroes":[],"towns":[]}
           """;
+
+    /// <summary>What a producer posts when it cannot read the HD Mod interface scale.</summary>
+    public static byte[] WithoutUiScale() =>
+        Encoding.UTF8.GetBytes(Text().Replace(",\"uiScale\":1", string.Empty, StringComparison.Ordinal));
+
+    public static byte[] WithoutDisplay() =>
+        Encoding.UTF8.GetBytes(
+            Text().Replace("\"display\":{\"width\":2560,\"height\":1440,\"uiScale\":1},", string.Empty, StringComparison.Ordinal));
 }

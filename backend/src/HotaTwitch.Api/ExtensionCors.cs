@@ -17,8 +17,10 @@ internal static class ExtensionCors
             PolicyName,
             policy => policy
                 .WithOrigins(AllowedOrigins(configuration))
-                .WithMethods(HttpMethods.Get, HttpMethods.Post, HttpMethods.Delete)
-                .WithHeaders(Microsoft.Net.Http.Headers.HeaderNames.Authorization)));
+                .WithMethods(HttpMethods.Get, HttpMethods.Post, HttpMethods.Put, HttpMethods.Delete)
+                .WithHeaders(
+                    Microsoft.Net.Http.Headers.HeaderNames.Authorization,
+                    Microsoft.Net.Http.Headers.HeaderNames.ContentType)));
 
     /// <summary>
     /// The extension's own origin, plus whatever <c>TWITCH_ALLOWED_ORIGINS</c> adds for the local

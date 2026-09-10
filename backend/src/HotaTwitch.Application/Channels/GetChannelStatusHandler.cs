@@ -11,6 +11,6 @@ public sealed class GetChannelStatusHandler(IChannelRepository channels)
 
         return channel is null
             ? ChannelStatus.Unconfigured
-            : new ChannelStatus(HasToken: true, channel.TokenHint, channel.LastStateAt);
+            : new ChannelStatus(channel.HasToken, channel.TokenHint, channel.LastStateAt, channel.Settings);
     }
 }

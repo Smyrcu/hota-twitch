@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.Text.Json;
 using HotaTwitch.Api.Authentication;
 using HotaTwitch.Api.Contracts;
 using HotaTwitch.Application.Channels;
+using HotaTwitch.Domain.Channels;
 
 namespace HotaTwitch.Api.Endpoints;
 
@@ -19,6 +21,7 @@ internal static class ConfigEndpoints
         config.MapGet("/channel", GetChannelAsync);
         config.MapPost("/token", IssueTokenAsync);
         config.MapDelete("/token", RevokeTokenAsync);
+        config.MapPut("/settings", UpdateSettingsAsync);
 
         return endpoints;
     }
@@ -30,7 +33,11 @@ internal static class ConfigEndpoints
     {
         var status = await handler.HandleAsync(BroadcasterEndpointFilter.ChannelIdOf(context), cancellationToken);
 
-        return Results.Ok(new ChannelStatusResponse(status.HasToken, status.TokenHint, Format(status.LastStateAt)));
+        return Results.Ok(new ChannelStatusResponse(
+            status.HasToken,
+            status.TokenHint,
+            Format(status.LastStateAt),
+            new ChannelSettingsResponse(status.Settings.UiScale)));
     }
 
     private static async Task<IResult> IssueTokenAsync(
@@ -49,6 +56,43 @@ internal static class ConfigEndpoints
         CancellationToken cancellationToken)
     {
         await handler.HandleAsync(BroadcasterEndpointFilter.ChannelIdOf(context), cancellationToken);
+
+        return Results.NoContent();
+    }
+
+    /// <summary>
+    /// The body is read here rather than bound as a parameter, because parameter binding runs
+    /// before the endpoint filter: a caller with no valid broadcaster token would otherwise have
+    /// its JSON buffered and parsed before anyone checked who it was.
+    /// </summary>
+    private static async Task<IResult> UpdateSettingsAsync(
+        HttpContext context,
+        UpdateChannelSettingsHandler handler,
+        CancellationToken cancellationToken)
+    {
+        var channelId = BroadcasterEndpointFilter.ChannelIdOf(context);
+
+        if (!context.Request.HasJsonContentType())
+        {
+            return Results.StatusCode(StatusCodes.Status415UnsupportedMediaType);
+        }
+
+        ChannelSettingsRequest? request;
+        try
+        {
+            request = await context.Request.ReadFromJsonAsync<ChannelSettingsRequest>(cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return Results.BadRequest();
+        }
+
+        if (request?.UiScale is not { } uiScale || !ChannelSettings.TryCreate(uiScale, out var settings))
+        {
+            return Results.BadRequest();
+        }
+
+        await handler.HandleAsync(channelId, settings, cancellationToken);
 
         return Results.NoContent();
     }

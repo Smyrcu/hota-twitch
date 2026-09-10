@@ -16,6 +16,7 @@ public sealed class StateEndpointTests : IAsyncLifetime
 {
     private static readonly Uri State = new("/v1/state", UriKind.Relative);
     private static readonly Uri Token = new("/v1/config/token", UriKind.Relative);
+    private static readonly Uri Settings = new("/v1/config/settings", UriKind.Relative);
 
     private readonly HotaTwitchApiFactory factory = new();
     private string streamerToken = string.Empty;
@@ -160,6 +161,40 @@ public sealed class StateEndpointTests : IAsyncLifetime
 
         status.Should().Be(HttpStatusCode.Accepted);
         factory.Publisher.Broadcasts.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task PostState_DocumentWithoutAScale_BroadcastsTheScaleTheStreamerConfigured()
+    {
+        await ConfigureScaleAsync("""{"uiScale":2.5}""");
+
+        await PostAsync(streamerToken, StateDocuments.WithoutUiScale());
+        await factory.DrainBroadcastsAsync();
+
+        factory.Publisher.Broadcasts.Should().ContainSingle();
+        using var relayed = JsonDocument.Parse(Gunzip(factory.Publisher.Broadcasts[0].Message));
+        relayed.RootElement.GetProperty("display").GetProperty("uiScale").GetDecimal().Should().Be(2.5m);
+        relayed.RootElement.GetProperty("display").GetProperty("width").GetInt32().Should().Be(2560);
+    }
+
+    [Fact]
+    public async Task PostState_DocumentThatCarriesAScale_BroadcastsThePostedDocumentUntouched()
+    {
+        await ConfigureScaleAsync("""{"uiScale":2.5}""");
+
+        await PostAsync(streamerToken, StateDocuments.Bytes());
+        await factory.DrainBroadcastsAsync();
+
+        factory.Publisher.Broadcasts.Should().ContainSingle();
+        Gunzip(factory.Publisher.Broadcasts[0].Message).Should().Be(StateDocuments.Text());
+    }
+
+    private async Task ConfigureScaleAsync(string body)
+    {
+        using var broadcaster = factory.CreateBroadcasterClient();
+        using var content = new StringContent(body, Encoding.UTF8, "application/json");
+        using var response = await broadcaster.PutAsync(Settings, content, TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
     }
 
     private async Task<HttpStatusCode> PostAsync(string? bearer, byte[] document)

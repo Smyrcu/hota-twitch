@@ -13,19 +13,14 @@ public sealed class IssueTokenHandler(IChannelRepository channels, IClock clock,
     public async Task<string> HandleAsync(ChannelId channelId, CancellationToken cancellationToken)
     {
         var token = StreamerToken.Generate();
-        var channel = await channels.FindByIdAsync(channelId, cancellationToken);
+        var hint = token.Hint();
+        var channel = await channels.FindByIdAsync(channelId, cancellationToken)
+            ?? Channel.Create(channelId, clock.UtcNow);
 
-        if (channel is null)
-        {
-            channel = Channel.Create(channelId, token, clock.UtcNow);
-        }
-        else
-        {
-            channel.RotateToken(token);
-        }
+        channel.RotateToken(token);
 
         await channels.SaveAsync(channel, cancellationToken);
-        IssueTokenLog.TokenIssued(logger, channelId.Value, channel.TokenHint);
+        IssueTokenLog.TokenIssued(logger, channelId.Value, hint);
 
         return token.Value;
     }

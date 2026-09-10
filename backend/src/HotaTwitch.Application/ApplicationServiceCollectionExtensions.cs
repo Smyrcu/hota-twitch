@@ -17,6 +17,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IssueTokenHandler>();
         services.AddScoped<RevokeTokenHandler>();
         services.AddScoped<GetChannelStatusHandler>();
+        services.AddScoped<UpdateChannelSettingsHandler>();
 
         return services;
     }

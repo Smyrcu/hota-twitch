@@ -2,6 +2,7 @@ using System.Text.Json;
 using AwesomeAssertions;
 using HotaTwitch.Api.Tests.Infrastructure;
 using HotaTwitch.Domain.Channels;
+using HotaTwitch.Infrastructure.Time;
 using HotaTwitch.Infrastructure.Twitch;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -63,11 +64,14 @@ public sealed class TwitchExtensionJwtFactoryTests
     [Fact]
     public async Task CreateExternalToken_Always_VerifiesAgainstTheExtensionSecret()
     {
+        // The verifier checks the lifetime against the wall clock, so this token is minted against
+        // the wall clock too rather than against the instant the other tests pin.
+        var factory = new TwitchExtensionJwtFactory(new ExtensionSecret(options), options, new SystemClock());
         var verifier = new TwitchExtensionJwtVerifier(
             new ExtensionSecret(options),
             NullLogger<TwitchExtensionJwtVerifier>.Instance);
 
-        var claims = await verifier.VerifyAsync(CreateToken());
+        var claims = await verifier.VerifyAsync(factory.CreateExternalToken(Channel));
 
         claims.Should().Be(new TwitchExtensionClaims("external", HotaTwitchApiFactory.ChannelId, HotaTwitchApiFactory.OwnerUserId));
     }
