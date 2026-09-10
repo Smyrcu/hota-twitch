@@ -4,11 +4,12 @@
 #:property PublishAot=false
 #:property TreatWarningsAsErrors=true
 
-// General-purpose DEF sprite explorer/exporter, used to regenerate individual entries under
-// overlay/assets/ once the source resource name is known. Archives are opened in HotA-override
-// order (HotA's own resources first, then the SoD-era ones they can replace).
+// DEF sprite explorer/exporter for the plaintext archives, used to regenerate individual entries
+// under overlay/assets/ once the source resource name is known. HotA.lod is deliberately absent:
+// its directory stores name hashes rather than names, so it can neither be listed nor read by
+// LodArchive - use h3lodmem.cs for anything HotA replaces.
 //
-//   dotnet run h3sprites.cs -- list <pattern>              # resource names matching pattern (any archive)
+//   dotnet run h3sprites.cs -- list <pattern>              # resource names matching pattern
 //   dotnet run h3sprites.cs -- frames <name.def> <outdir>  # one PNG per frame, <outdir>/<index>.png
 
 using H3Assets;
@@ -17,7 +18,6 @@ using SixLabors.ImageSharp;
 const string GameDir = "/home/smyrcu/Games/Heroic/Heroes of Might and Magic III - Horn of the Abyss";
 (string Path, string Label)[] archiveFiles =
 [
-    ("Data/HotA.lod", "HotA.lod"),
     ("Data/h3sprite.lod", "h3sprite.lod"),
     ("Data/h3bitmap.lod", "h3bitmap.lod"),
 ];

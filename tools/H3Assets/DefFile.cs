@@ -25,7 +25,7 @@ public sealed record DefGroup(uint Id, IReadOnlyList<string> FrameNames);
 /// Palette index 0 is always transparent; indices 1-7 are shadow levels when the palette entry
 /// at that index is one of the game's reserved "magic" colours.
 /// </summary>
-public sealed class DefFile
+public sealed class DefFile : ISpriteSheet
 {
     private static readonly (byte R, byte G, byte B)[] ShadowKeyColors =
     [
@@ -59,6 +59,8 @@ public sealed class DefFile
     public IReadOnlyList<DefGroup> Groups { get; }
 
     public IReadOnlyList<DefFrame> Frames { get; }
+
+    public int FrameCount => Frames.Count;
 
     public static DefFile Parse(byte[] data)
     {

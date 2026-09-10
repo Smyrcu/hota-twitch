@@ -1,32 +1,32 @@
-using System.IO.Compression;
 using System.Text;
 
 namespace H3Assets;
 
 public sealed record LodEntry(string Name, uint Offset, uint Size, uint CompressedSize);
 
-public sealed class LodArchive
+public sealed class LodArchive : IResourceArchive
 {
     private const int HeaderSize = 92;
     private const int EntrySize = 32;
 
-    private readonly string _path;
     private readonly byte[] _data;
     private readonly Dictionary<string, LodEntry> _entriesByName;
 
     private LodArchive(string path, byte[] data, IReadOnlyList<LodEntry> entries)
     {
-        _path = path;
         _data = data;
 
-        // An encrypted archive's entry names decode to garbage and can collide (observed in
-        // HotA.lod); the first occurrence of a name wins.
+        // The shipped archives hold no duplicate names, but the format does not forbid them; the
+        // first occurrence wins, which is the one the game itself resolves.
         _entriesByName = entries
             .GroupBy(e => e.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+        Label = Path.GetFileName(path);
         Entries = entries;
     }
+
+    public string Label { get; }
 
     public IReadOnlyList<LodEntry> Entries { get; }
 
@@ -67,7 +67,7 @@ public sealed class LodArchive
 
     public LodEntry Find(string name)
     {
-        return TryFind(name) ?? throw new FileNotFoundException($"{name} is not in {_path}");
+        return TryFind(name) ?? throw new FileNotFoundException($"{name} is not in {Label}");
     }
 
     public LodEntry? TryFind(string name)
@@ -75,23 +75,14 @@ public sealed class LodArchive
         return _entriesByName.GetValueOrDefault(name);
     }
 
+    public byte[]? TryRead(string name)
+    {
+        var entry = TryFind(name);
+        return entry is null ? null : Read(entry);
+    }
+
     public byte[] Read(LodEntry entry)
     {
-        var storedLength = entry.CompressedSize == 0 ? entry.Size : entry.CompressedSize;
-        if ((long)entry.Offset + storedLength > _data.Length)
-        {
-            throw new InvalidDataException($"{_path}: entry '{entry.Name}' declares a range past the end of the archive");
-        }
-
-        if (entry.CompressedSize == 0)
-        {
-            return _data.AsSpan((int)entry.Offset, (int)entry.Size).ToArray();
-        }
-
-        using var compressed = new MemoryStream(_data, (int)entry.Offset, (int)entry.CompressedSize);
-        using var zlib = new ZLibStream(compressed, CompressionMode.Decompress);
-        using var decompressed = new MemoryStream((int)entry.Size);
-        zlib.CopyTo(decompressed);
-        return decompressed.ToArray();
+        return LodPayload.Read(_data, entry.Offset, entry.Size, entry.CompressedSize, $"{Label}: entry '{entry.Name}'");
     }
 }
