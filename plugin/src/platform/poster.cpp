@@ -16,10 +16,6 @@ using namespace std::chrono;
 constexpr std::int64_t kMinIntervalMs = 500;
 constexpr std::int64_t kRepostIntervalMs = 10000;
 
-/// How long the worker waits for a snapshot before looking at the clock again. Short enough
-/// that the ten-second repost is not late, long enough that an idle game costs nothing.
-constexpr milliseconds kWait{500};
-
 /// After a failed post the worker backs off rather than hammering a backend that is down or
 /// rate limiting it, up to a ceiling that still recovers quickly once the outage ends.
 constexpr std::int64_t kFirstBackoffMs = 1000;
@@ -95,31 +91,21 @@ void Poster::deliverLoop()
 {
     StateSnapshot current;
     std::string document;
-    bool haveState = false;
     for (;;)
     {
-        const TakeResult result = m_mailbox.take(current, kWait);
+        const std::int64_t waited = waitMs(unsent(current), steadyMilliseconds());
+        const TakeResult result = m_mailbox.take(current, milliseconds(waited));
         if (result == TakeResult::Stopped)
         {
             break;
         }
         if (result == TakeResult::Received)
         {
-            haveState = true;
-        }
-        else if (!haveState)
-        {
-            continue;
+            m_policy.stateReceived();
         }
 
         const std::int64_t now = steadyMilliseconds();
-        if (now < m_retryAfterMs || !connect(now))
-        {
-            continue;
-        }
-
-        const bool changed = !m_hasDelivered || !current.sameStateAs(m_delivered);
-        if (!m_policy.allows(changed, now))
+        if (!m_policy.allows(unsent(current), now) || now < m_retryAfterMs || !connect(now))
         {
             continue;
         }
@@ -136,6 +122,22 @@ void Poster::deliverLoop()
     m_log.info("the worker stopped");
 }
 
+/// Whether the worker is holding a state the backend has not accepted. Worked out afresh
+/// wherever it is needed rather than carried between passes: a post that fails leaves the
+/// state unsent, and remembering the answer from before the attempt would have the worker
+/// wait out the repost interval instead of retrying when the backoff says it may.
+bool Poster::unsent(const StateSnapshot& state) const
+{
+    return !m_hasDelivered || !state.sameStateAs(m_delivered);
+}
+
+std::int64_t Poster::waitMs(bool changePending, std::int64_t nowMs) const
+{
+    const std::int64_t cadence = m_policy.waitForMs(changePending, nowMs);
+    const std::int64_t backoff = m_retryAfterMs > nowMs ? m_retryAfterMs - nowMs : 0;
+    return cadence > backoff ? cadence : backoff;
+}
+
 /// Opening the connection is retried rather than given up on: the streamer may well start the
 /// game before the network is up, and INSTALL.md promises the plugin sorts itself out.
 bool Poster::connect(std::int64_t nowMs)
@@ -147,8 +149,15 @@ bool Poster::connect(std::int64_t nowMs)
     m_connected = m_http.open(m_config.backendUrl, m_config.token);
     if (m_connected)
     {
-        m_log.info("posting state to " + m_config.backendUrl);
-        m_backoffMs = 0;
+        // Opening reaches no further than the URL and the session handles, so it says nothing
+        // about the backend being up. The backoff is cleared where that is actually known -
+        // when a post comes back accepted - and the destination is worth one line, not one per
+        // attempt while the backend is unreachable.
+        if (!m_announced)
+        {
+            m_announced = true;
+            m_log.info("posting state to " + m_config.backendUrl);
+        }
         return true;
     }
     backOff(nowMs, "no connection to " + m_config.backendUrl);

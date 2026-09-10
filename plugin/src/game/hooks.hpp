@@ -5,6 +5,8 @@
 #include "core/snapshot_sink.hpp"
 #include "game/reader.hpp"
 
+#include <atomic>
+
 namespace hota_twitch::game
 {
 
@@ -30,6 +32,12 @@ public:
     /// the case when the DLL is loaded before it.
     bool install();
 
+    /// Asks for a snapshot at the next hooked call, whatever the throttle and the screen gate
+    /// would otherwise decide. The plugin can be set up long after a game has been loaded, and
+    /// then there is a state worth sending before anything in the game changes. This is the
+    /// only method safe to call from a thread other than the game's.
+    void requestSnapshot();
+
     /// Reads the game and hands the result to the worker. Only ever called on the game thread.
     void snapshot();
 
@@ -42,6 +50,13 @@ public:
     void snapshotIfScreenChanged();
 
 private:
+    /// Whether a snapshot has been asked for and not yet taken.
+    bool requested() const;
+    /// Puts back a request whose snapshot could not be read.
+    void restoreRequest(bool servingRequest);
+    /// Logs how long the game took to call a hooked function after the hooks went in.
+    void reportFirstSnapshot();
+
     Logger& m_log;
     Reader& m_reader;
     SnapshotSink& m_sink;
@@ -56,6 +71,13 @@ private:
     /// nest inside another - a redraw that opens a screen, say - and the second one would then
     /// be filling the same snapshot the first is halfway through.
     bool m_takingSnapshot = false;
+    /// Asked for from whichever thread set the plugin up, cleared on the game thread once the
+    /// snapshot has been taken.
+    std::atomic<bool> m_requested{false};
+    /// When the hooks went in, and whether the first snapshot since has been reported. The
+    /// gap between the two is how long the game left the overlay with nothing to show.
+    unsigned long m_installedTicks = 0;
+    bool m_firstSnapshotReported = false;
 };
 
 } // namespace hota_twitch::game

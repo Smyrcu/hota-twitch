@@ -7,6 +7,7 @@
 #include <windows.h>
 
 #include <atomic>
+#include <string>
 
 namespace hota_twitch::game
 {
@@ -84,6 +85,10 @@ bool Hooks::install()
         return false;
     }
 
+    // Written before the hooks are published, so that the release below carries it to the game
+    // thread: the first hook can fire between two WriteHiHook calls, and it reports against
+    // this value.
+    m_installedTicks = GetTickCount();
     g_hooks.store(this, std::memory_order_release);
     instance->WriteHiHook(layout::kAdvManagerUpdateScreen, SPLICE_, EXTENDED_, THISCALL_,
                           &onAdventureUpdate);
@@ -96,6 +101,27 @@ bool Hooks::install()
     return true;
 }
 
+void Hooks::requestSnapshot()
+{
+    m_requested.store(true, std::memory_order_release);
+}
+
+bool Hooks::requested() const
+{
+    return m_requested.load(std::memory_order_acquire);
+}
+
+/// A read that threw delivered nothing, so a request it was serving has not been answered and
+/// goes back. Only that case: re-arming after a snapshot nobody asked for would have a game
+/// whose state cannot be read retry on every hook call instead of on the throttle.
+void Hooks::restoreRequest(bool servingRequest)
+{
+    if (servingRequest)
+    {
+        m_requested.store(true, std::memory_order_release);
+    }
+}
+
 void Hooks::snapshot()
 {
     if (m_takingSnapshot)
@@ -103,6 +129,9 @@ void Hooks::snapshot()
         return;
     }
     m_takingSnapshot = true;
+    // Taken here rather than where the request is noticed, so that one arriving while a
+    // snapshot is already being taken is left for the next hook call rather than swallowed.
+    const bool servingRequest = m_requested.exchange(false, std::memory_order_acq_rel);
     m_lastSnapshotTicks = GetTickCount();
     // The game has no idea what a C++ exception is: whatever goes wrong while reading, the
     // game thread has to come back out of here and carry on. The handlers log a fixed string
@@ -114,24 +143,41 @@ void Hooks::snapshot()
         // The gate below compares against the screen the game is on, not the one the document
         // reports: a loaded game with no local human in it is reported as no game at all.
         m_lastScreen = m_reader.currentScreen();
+        reportFirstSnapshot();
         m_sink.publish(m_building);
     }
     catch (const std::bad_alloc&)
     {
+        restoreRequest(servingRequest);
         m_log.error("out of memory while taking a snapshot");
     }
     catch (...)
     {
+        restoreRequest(servingRequest);
         m_log.error("taking a snapshot failed");
     }
     m_takingSnapshot = false;
+}
+
+/// Reported once per run: the game only calls a hooked function when something happens on
+/// screen, so this is how long the overlay had nothing to show after the plugin was set up.
+void Hooks::reportFirstSnapshot()
+{
+    if (m_firstSnapshotReported)
+    {
+        return;
+    }
+    m_firstSnapshotReported = true;
+    const std::string_view screen = screenName(m_lastScreen);
+    m_log.info("first snapshot " + std::to_string(GetTickCount() - m_installedTicks) +
+               " ms after the hooks went in, screen " + std::string(screen));
 }
 
 void Hooks::snapshotIfDue()
 {
     // GetTickCount wraps every 49 days; unsigned subtraction keeps the difference right
     // across the wrap.
-    if (GetTickCount() - m_lastSnapshotTicks < kMinimumIntervalMs)
+    if (!requested() && GetTickCount() - m_lastSnapshotTicks < kMinimumIntervalMs)
     {
         return;
     }
@@ -140,7 +186,11 @@ void Hooks::snapshotIfDue()
 
 void Hooks::snapshotIfScreenChanged()
 {
-    if (m_takingSnapshot || m_reader.currentScreen() == m_lastScreen)
+    if (m_takingSnapshot)
+    {
+        return;
+    }
+    if (!requested() && m_reader.currentScreen() == m_lastScreen)
     {
         return;
     }

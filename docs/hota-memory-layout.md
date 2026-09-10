@@ -16,7 +16,8 @@ Sources referred to below:
   disagree, the spike watched the running game and wins.
 
 Everything marked *unconfirmed* is a reasoned inference that no one has yet seen move in a
-live game. The live check listed at the end of the plugin's report is what settles them.
+live game. Reading the value out of a running game is what settles it, and the entry says so
+once it has been settled.
 
 ## What NH3API already covers
 
@@ -73,12 +74,22 @@ This is the one place where NH3API's SoD layout is provably wrong for HotA. NH3A
 
 The spike watched `+0x68` count `0 -> 1 -> 2` while scrolling the town list, and return to 0 on
 coming back from a town. A pointer is never 0, 1 or 2, so under HotA + HD Mod the pair sits four
-bytes further along than SoD says. `+0x64` read 0 for a player who owned exactly eight heroes
-and therefore could not scroll the hero list at all: consistent with `topHero`, but *unconfirmed*
-- nobody has watched it move.
+bytes further along than SoD says.
+
+`+0x68` is **confirmed**. Read out of a live HotA 1.8 process on 2026-09-09 with the town list
+scrolled by one entry: `+0x60` and `+0x6C` held pointers (`0x07EBA0F0`, `0x1A223000`) while
+`+0x64` held 0 and `+0x68` held 1, and the document the plugin posted at that moment carried
+`townListTop: 1`. The same read confirmed the route to the window: `gpExec->tailManager` and
+`gpAdvManager` were the same object, so the adventure screen was the one on top.
+
+`+0x64` is still *unconfirmed*. It reads 0 for a player who owns exactly eight heroes, which
+fills the list and leaves nothing to scroll, so the value is consistent with `topHero` without
+proving anything. Watching it move needs a game with more than eight heroes.
 
 Both are read as raw INT32 at an offset rather than through the NH3API member, and both are
-range-checked (`0 <= value < 48`); anything else is reported as 0.
+range-checked (`0 <= value < 48`); anything else is reported as 0. At debug level the plugin
+logs the raw pair and the window pointer on the first read and on every change afterwards,
+because a list that cannot scroll and an offset that is not the scroll at all both report 0.
 
 The window itself is the risk, not the values. The manager hooks fire the moment the adventure
 manager is torn down - quitting to the menu, loading a game - and at that point `gpAdvManager`
@@ -195,6 +206,27 @@ The manager hooks exist because the adventure hook stops being called the moment
 battle opens. Without them the last document posted would still say `screen: "adventure"`, and
 the overlay would keep drawing cards over a town screen for as long as the streamer stayed
 there.
+
+### When the hooks do not fire
+
+All three run only when something happens in the game, and the game stops calling them when
+nothing does. Measured on 2026-09-09: the hooks went in while a map was loaded and the first
+one fired four minutes and twelve seconds later, when the window was given the mouse again.
+NH3API documents `WeAreActiveWindow` at `0x6783D0`, so the game does track whether it has the
+focus; that it stops redrawing without it is the likely explanation, and it is a hypothesis
+rather than a measurement.
+
+Two things follow, and the plugin does both. The worker keeps the ten-second repost on its own
+clock, so once one snapshot exists the stream carries on whether or not the game produces
+another. And setting the plugin up asks for a snapshot, which the next hooked call takes
+whatever the throttle and the screen gate would otherwise decide, because a game can already be
+under way when the plugin arrives.
+
+What neither covers is a game that calls no hooked function at all - the plugin has nothing to
+send until the first one does. Reaching that case needs a tick the game runs even when idle;
+`SetTimer` on `hwndApp` (`0x699650`) would give one on the game thread, at a message boundary,
+which is the safety class the manager hooks already have. It is not in the plugin: whether H3's
+message pump goes through `DispatchMessage` has not been established on a running game.
 
 ## Things that are not read
 

@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <string>
 
 namespace hota_twitch::game
 {
@@ -57,10 +58,24 @@ std::int32_t effectivePrimary(const hero& source, std::int32_t primary)
     return THISCALL_2(std::int32_t, layout::kHeroGetPrimary, &source, primary);
 }
 
-std::int32_t readListTop(const void* window, std::size_t offset)
+/// A scroll offset the panel could actually be showing. Anything else means the word is not
+/// the one we think it is, and the list is reported unscrolled.
+bool inListRange(std::int32_t top)
 {
-    const std::int32_t top = readAt<std::int32_t>(window, offset);
-    return top >= 0 && top < layout::kMaxListTop ? top : 0;
+    return top >= 0 && top < layout::kMaxListTop;
+}
+
+std::string asHex(const void* pointer)
+{
+    static constexpr char kDigits[] = "0123456789abcdef";
+    auto value = reinterpret_cast<std::uintptr_t>(pointer);
+    std::string text(sizeof(value) * 2, '0');
+    for (std::size_t index = text.size(); index > 0; --index)
+    {
+        text[index - 1] = kDigits[value & 0xF];
+        value >>= 4;
+    }
+    return "0x" + text;
 }
 
 } // namespace
@@ -151,19 +166,61 @@ Screen Reader::currentScreen() const
 /// hooks fire the moment it is torn down - quitting to the menu, loading a game - and
 /// `gpAdvManager` can still be set with its window already freed, so the scroll is read only
 /// while that screen is up, and only after the pages behind the pointer are confirmed present.
-void Reader::readPanelScroll(PlayerSnapshot& player) const
+void Reader::readPanelScroll(PlayerSnapshot& player)
 {
     if (currentScreen() != Screen::Adventure || gpAdvManager == nullptr)
     {
+        noteScroll(ScrollRead::NotOnAdventure, nullptr, 0, 0);
         return;
     }
     const void* const window = gpAdvManager->advWindow;
     if (!isReadable(window, layout::kAdvWindowTopTown + sizeof(std::int32_t)))
     {
+        noteScroll(ScrollRead::WindowUnreadable, window, 0, 0);
         return;
     }
-    player.heroListTop = readListTop(window, layout::kAdvWindowTopHero);
-    player.townListTop = readListTop(window, layout::kAdvWindowTopTown);
+    const std::int32_t rawHero = readAt<std::int32_t>(window, layout::kAdvWindowTopHero);
+    const std::int32_t rawTown = readAt<std::int32_t>(window, layout::kAdvWindowTopTown);
+    player.heroListTop = inListRange(rawHero) ? rawHero : 0;
+    player.townListTop = inListRange(rawTown) ? rawTown : 0;
+    noteScroll(ScrollRead::Read, window, rawHero, rawTown);
+}
+
+void Reader::noteScroll(ScrollRead state, const void* window, std::int32_t rawHero,
+                        std::int32_t rawTown)
+{
+    if (!m_log.enabled(LogLevel::Debug))
+    {
+        return;
+    }
+    // The window is part of what changed: loading a saved game moves it while both scroll
+    // words stay 0, and the log would otherwise still be naming the window that is gone.
+    if (state == m_scrollState && window == m_scrollWindow && rawHero == m_scrollHeroRaw &&
+        rawTown == m_scrollTownRaw)
+    {
+        return;
+    }
+    m_scrollState = state;
+    m_scrollWindow = window;
+    m_scrollHeroRaw = rawHero;
+    m_scrollTownRaw = rawTown;
+
+    switch (state)
+    {
+    case ScrollRead::NotOnAdventure:
+        m_log.debug("panel scroll not read: the adventure screen is not the one on top");
+        break;
+    case ScrollRead::WindowUnreadable:
+        m_log.debug("panel scroll not read: the adventure window at " + asHex(window) +
+                    " is not readable");
+        break;
+    case ScrollRead::Read:
+        m_log.debug("panel scroll from the adventure window at " + asHex(window) + ": heroes " +
+                    std::to_string(rawHero) + ", towns " + std::to_string(rawTown));
+        break;
+    case ScrollRead::Unknown:
+        break;
+    }
 }
 
 void Reader::readHeroes(const playerData& player, std::vector<HeroSnapshot>& heroes)

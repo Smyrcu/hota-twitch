@@ -41,11 +41,20 @@ void Plugin::initialise(HMODULE module)
         setUp(module);
         m_setUp = true;
     }
-    if (m_hooks != nullptr && !m_hooks->install())
+    if (m_hooks == nullptr)
+    {
+        return;
+    }
+    if (!m_hooks->install())
     {
         m_log->warn("the HD Mod patcher is not loaded yet, so no hooks are in place; the "
                     "plugin will try again if it is initialised once the game is up");
+        return;
     }
+    // A game may already be under way - the plugin can be set up at any point in the process's
+    // life. Waiting for the next thing to happen on screen would leave the overlay blank for
+    // as long as the streamer sits still, so a snapshot is asked for straight away.
+    m_hooks->requestSnapshot();
 }
 
 void Plugin::setUp(HMODULE module)
