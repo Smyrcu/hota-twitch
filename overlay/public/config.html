@@ -8,18 +8,18 @@
   </head>
   <body>
     <main class="panel">
-      <h1>Horn of the Abyss overlay</h1>
+      <h1 data-font="title">Horn of the Abyss overlay</h1>
 
       <section class="block">
-        <h2>Connection</h2>
-        <p class="status" data-status>Connecting…</p>
-        <p class="hint" data-hint></p>
-        <p class="error" data-error hidden></p>
+        <h2 data-font="heading">Connection</h2>
+        <p class="status" data-font="body" data-status>Connecting…</p>
+        <p class="hint" data-font="hint" data-hint></p>
+        <p class="error" data-font="bad" data-error hidden></p>
       </section>
 
       <section class="block">
-        <h2>Streamer token</h2>
-        <p>
+        <h2 data-font="heading">Streamer token</h2>
+        <p data-font="body">
           The token binds the plugin in your game to this channel. It is shown once; generating a
           new one replaces the old.
         </p>
@@ -34,11 +34,20 @@
       </section>
 
       <section class="block">
-        <h2>Setup</h2>
+        <h2 data-font="heading">Interface scale</h2>
+        <p data-font="body">The HD Mod interface scale you play with; cards and hover areas follow it.</p>
+        <label class="field">
+          <span>Scale</span>
+          <select data-ui-scale></select>
+        </label>
+      </section>
+
+      <section class="block">
+        <h2 data-font="heading">Setup</h2>
         <ol>
-          <li>Generate the token above and copy it.</li>
-          <li>Paste it into <code>hota-twitch.ini</code>, next to <code>hota-twitch.dll</code> in your game folder.</li>
-          <li>Start Heroes III. This page will show “connected” once the game sends its first state.</li>
+          <li data-font="body">1. Generate the token above and copy it.</li>
+          <li data-font="body">2. Paste it into hota-twitch.ini, next to hota-twitch.dll in your game folder.</li>
+          <li data-font="body">3. Start Heroes III. This page will show “connected” once the game sends its first state.</li>
         </ol>
       </section>
     </main>

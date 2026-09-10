@@ -5,13 +5,21 @@ interface Call {
   readonly url: string;
   readonly method: string;
   readonly authorization: string | undefined;
+  readonly contentType: string | undefined;
+  readonly body: string | undefined;
 }
 
 function stubFetch(reply: (call: Call) => Response): Call[] {
   const calls: Call[] = [];
   vi.stubGlobal('fetch', (url: string, init: RequestInit) => {
     const headers = init.headers as Record<string, string>;
-    const call = { url, method: init.method ?? 'GET', authorization: headers['Authorization'] };
+    const call = {
+      url,
+      method: init.method ?? 'GET',
+      authorization: headers['Authorization'],
+      contentType: headers['Content-Type'],
+      body: typeof init.body === 'string' ? init.body : undefined,
+    };
     calls.push(call);
     return Promise.resolve(reply(call));
   });
@@ -29,12 +37,17 @@ describe('streamer configuration API', () => {
 
     const channel = await new ConfigApi('jwt').channel();
 
-    expect(calls[0]).toEqual({
+    expect(calls[0]).toMatchObject({
       url: `${BACKEND_URL}/v1/config/channel`,
       method: 'GET',
       authorization: 'Bearer jwt',
     });
-    expect(channel).toEqual({ hasToken: true, tokenHint: 'hts_ab…', lastStateAt: '2026-09-09T22:00:00Z' });
+    expect(channel).toEqual({
+      hasToken: true,
+      tokenHint: 'hts_ab…',
+      lastStateAt: '2026-09-09T22:00:00Z',
+      settings: { uiScale: 1 },
+    });
   });
 
   it('fills in the missing fields of a channel answer', async () => {
@@ -44,7 +57,34 @@ describe('streamer configuration API', () => {
       hasToken: false,
       tokenHint: null,
       lastStateAt: null,
+      settings: { uiScale: 1 },
     });
+  });
+
+  it('reads the interface scale the channel is set to', async () => {
+    stubFetch(() => json({ hasToken: false, settings: { uiScale: 1.5 } }));
+
+    expect((await new ConfigApi('jwt').channel()).settings.uiScale).toBe(1.5);
+  });
+
+  it('saves the interface scale as a JSON body on PUT', async () => {
+    const calls = stubFetch(() => new Response(null, { status: 204 }));
+
+    await new ConfigApi('jwt').saveSettings({ uiScale: 1.75 });
+
+    expect(calls[0]).toEqual({
+      url: `${BACKEND_URL}/v1/config/settings`,
+      method: 'PUT',
+      authorization: 'Bearer jwt',
+      contentType: 'application/json',
+      body: '{"uiScale":1.75}',
+    });
+  });
+
+  it('reports a refused save so the streamer is not told it worked', async () => {
+    stubFetch(() => json({ error: 'nope' }, 400));
+
+    await expect(new ConfigApi('jwt').saveSettings({ uiScale: 2 })).rejects.toThrow('400');
   });
 
   it('issues a token with POST', async () => {

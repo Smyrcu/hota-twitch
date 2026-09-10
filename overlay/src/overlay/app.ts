@@ -1,5 +1,5 @@
 import { readParams, type OverlayParams } from '../dev/params.js';
-import { pollMock } from '../dev/mock.js';
+import { DEFAULT_MOCK_SOURCE, pollMock } from '../dev/mock.js';
 import { cardFor, type Selection } from '../render/card.js';
 import { FontStore } from '../render/fonts.js';
 import { CardPainter } from '../render/painter.js';
@@ -7,16 +7,13 @@ import { SpriteCache } from '../render/sprites.js';
 import type { GameState } from '../state/protocol.js';
 import { parseDisplayResolution, twitchExt } from '../twitch/ext.js';
 import { BroadcastReceiver } from '../twitch/receiver.js';
-import { computeZones, containFit, type Zone } from '../zones/index.js';
+import { computeZones, containFit, videoRect, type Rect, type Size, type Zone } from '../zones/index.js';
 import { CardView } from './card-view.js';
 import { advance, matches, selectionFor } from './interaction.js';
-import { cardScale, fitScale } from './scale.js';
+import { cardScale, shrinkToFit } from './scale.js';
 import { ZoneLayer } from './zone-layer.js';
 
-interface Size {
-  width: number;
-  height: number;
-}
+const round = (value: number): string => (Math.round(value * 10) / 10).toString();
 
 export class OverlayApp {
   private state: GameState | null = null;
@@ -80,6 +77,7 @@ export class OverlayApp {
       pollMock(
         (state) => this.apply(state),
         (reason) => this.report(reason),
+        this.params.state ?? DEFAULT_MOCK_SOURCE,
       ),
     );
   }
@@ -166,20 +164,21 @@ export class OverlayApp {
       return;
     }
 
+    const video = videoRect(state.display, containFit(state.display, this.player));
+    const target = cardScale(state.display.uiScale, video.width / state.display.width);
     this.zones = computeZones(state, this.player);
     this.layer.render(this.zones, this.params.debug);
-    this.drawStatus(state);
 
     const zone = this.currentZone();
     const card =
       this.selection === null || zone === null ? null : cardFor(state, this.selection, this.countLines);
+    const drawn = card === null ? target : shrinkToFit(target, card, video);
+    this.drawStatus(state, video, target, drawn);
     if (card === null || zone === null) {
       this.view.hide();
       return;
     }
-    const fit = containFit(state.display, this.player);
-    const scale = cardScale(state.display.uiScale, fit.scale);
-    this.view.show(card, zone, this.player, fitScale(scale, card.height, this.player.height));
+    this.view.show(card, zone, video, drawn);
   }
 
   /** The live zone for the selection, so the card follows a resize or a list scroll. */
@@ -189,13 +188,17 @@ export class OverlayApp {
     return this.zones.find((zone) => matches(selection, zone)) ?? null;
   }
 
-  private drawStatus(state: GameState): void {
+  /** `drawn` differs from `target` only for an expansion that had to be shrunk to fit. */
+  private drawStatus(state: GameState, video: Rect, target: number, drawn: number): void {
     if (this.status === null) return;
     const age = Math.round((Date.now() - state.ts) / 1000);
     const problem = this.problem === '' ? '' : ` · ${this.problem}`;
+    const scale = drawn === target ? `x${target.toFixed(3)}` : `x${target.toFixed(3)} shrunk to x${drawn.toFixed(3)}`;
     this.status.textContent =
-      `${state.screen} · ${state.display.width}x${state.display.height} @${state.display.uiScale} · ` +
-      `player ${this.player.width}x${this.player.height} · ${this.zones.length} zones · ${age}s${problem}`;
+      `${state.screen} · game ${state.display.width}x${state.display.height} @${state.display.uiScale} · ` +
+      `player ${this.player.width}x${this.player.height} · video ${round(video.width)}x${round(video.height)} ` +
+      `at ${round(video.x)},${round(video.y)} · card ${scale} · ` +
+      `${this.zones.length} zones · ${age}s${problem}`;
   }
 }
 

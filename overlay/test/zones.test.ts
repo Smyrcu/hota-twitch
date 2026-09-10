@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { HERO_LIST, TOWN_LIST, computeZones, containFit, visibleRows } from '../src/zones/index.js';
+import { HERO_LIST, TOWN_LIST, computeZones, containFit, videoRect, visibleRows } from '../src/zones/index.js';
 import type { GameState } from '../src/state/protocol.js';
 
 interface Slot {
@@ -64,6 +64,54 @@ describe('hover zones', () => {
     const first = computeZones(state(), player)[0];
     expect(first?.rect.x).toBeCloseTo(fit.offsetX + 2369 * fit.scale, 6);
     expect(first?.rect.y).toBeCloseTo(198 * fit.scale, 6);
+  });
+
+  it('lands on the panel at 1920x1080 with the interface scale at 1.5', () => {
+    const display = { width: 1920, height: 1080, uiScale: 1.5 };
+    const zones = computeZones(state({ display }), { width: 1920, height: 1080 });
+    const heroes = zones.filter((zone) => zone.kind === 'hero');
+    const towns = zones.filter((zone) => zone.kind === 'town');
+
+    // The panel hangs off the top-right corner, so every offset is multiplied by the scale.
+    expect(heroes[0]?.rect).toEqual({ x: 1920 - 191 * 1.5, y: 198 * 1.5, width: 96, height: 48 });
+    expect(heroes[1]?.rect.y).toBe((198 + 32) * 1.5);
+    expect(towns[0]?.rect).toEqual({ x: 1920 - 54 * 1.5, y: 214 * 1.5, width: 72, height: 48 });
+
+    // 1080 physical pixels are 720 logical ones, which still holds the whole widget.
+    expect(heroes).toHaveLength(8);
+    expect(towns).toHaveLength(7);
+  });
+
+  it('lands on the panel at 1920x1080 with the interface scale at 1', () => {
+    const display = { width: 1920, height: 1080, uiScale: 1 };
+    const zones = computeZones(state({ display }), { width: 1920, height: 1080 });
+    const heroes = zones.filter((zone) => zone.kind === 'hero');
+
+    expect(heroes[0]?.rect).toEqual({ x: 1729, y: 198, width: 64, height: 32 });
+    expect(heroes).toHaveLength(8);
+  });
+
+  it('reports the picture inside the player, letterbox included', () => {
+    const game = { width: 1920, height: 1080 };
+
+    expect(videoRect(game, containFit(game, { width: 1920, height: 1080 }))).toEqual({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    });
+    expect(videoRect(game, containFit(game, { width: 1920, height: 1200 }))).toEqual({
+      x: 0,
+      y: 60,
+      width: 1920,
+      height: 1080,
+    });
+    expect(videoRect(game, containFit(game, { width: 1280, height: 720 }))).toEqual({
+      x: 0,
+      y: 0,
+      width: 1280,
+      height: 720,
+    });
   });
 
   it('multiplies the logical offsets by the interface scale', () => {

@@ -29,10 +29,15 @@ body {
   background: rgba(255, 231, 148, 0.12);
 }
 
+/*
+ * The card is rasterised at a whole multiple of its target size and presented at the exact,
+ * usually fractional size the video calls for, so it must be interpolated on the way down.
+ * Pixelating it here would drop glyph rows out of the counts.
+ */
 .card {
   position: absolute;
   pointer-events: none;
-  image-rendering: pixelated;
+  image-rendering: auto;
 }
 
 .status {

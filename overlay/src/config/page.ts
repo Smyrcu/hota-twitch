@@ -1,6 +1,8 @@
 import { twitchExt, type TwitchAuth } from '../twitch/ext.js';
 import { ConfigApi } from './api.js';
+import { DEFAULT_UI_SCALE, formatUiScale, settleUiScale, uiScaleOptions } from './settings.js';
 import { describeConnection } from './status.js';
+import { Typography } from './typography.js';
 
 const REFRESH_MS = 10_000;
 
@@ -49,22 +51,32 @@ export class ConfigPage {
   private api: ConfigApi | null = null;
   private polling: ReturnType<typeof setInterval> | null = null;
   private refreshing = false;
+  /** A scale the streamer picked that the backend has not confirmed yet. */
+  private chosenScale: number | null = null;
   private readonly view: StatusView;
   private readonly controls: TokenControls | null;
+  private readonly uiScale: HTMLSelectElement | null;
+  private readonly type = new Typography();
 
-  constructor(root: ParentNode) {
+  constructor(private readonly root: ParentNode) {
     this.view = collectStatus(root);
     this.controls = collectControls(root);
+    this.uiScale = root.querySelector<HTMLSelectElement>('[data-ui-scale]');
+    if (this.uiScale !== null) {
+      this.showUiScale(DEFAULT_UI_SCALE);
+      this.uiScale.addEventListener('change', () => void this.saveUiScale());
+    }
     if (this.controls === null) return;
     this.controls.generate.addEventListener('click', () => void this.generate());
     this.controls.revoke.addEventListener('click', () => void this.revoke());
     this.controls.copy.addEventListener('click', () => void this.copy());
   }
 
-  start(): void {
+  async start(): Promise<void> {
+    await this.type.start(this.root);
     const ext = twitchExt();
     if (ext === null) {
-      this.view.status.textContent = 'Open this page from the Twitch dashboard.';
+      this.type.write(this.view.status, 'Open this page from the Twitch dashboard.');
       return;
     }
     ext.onAuthorized((auth: TwitchAuth) => {
@@ -80,9 +92,13 @@ export class ConfigPage {
     try {
       const channel = await this.api.channel();
       const status = describeConnection(channel.hasToken, channel.lastStateAt);
-      this.view.status.textContent = status.text;
+      this.type.write(this.view.status, status.text, status.connected ? 'good' : 'body');
+      // The class still carries the meaning when the game fonts cannot be loaded.
       this.view.status.classList.toggle('connected', status.connected);
-      this.view.hint.textContent = channel.tokenHint ?? '';
+      this.type.write(this.view.hint, channel.tokenHint ?? '');
+      const scale = settleUiScale(this.chosenScale, channel.settings.uiScale);
+      this.chosenScale = scale.chosen;
+      this.showUiScale(scale.show);
       if (this.controls !== null) {
         this.controls.revoke.disabled = !channel.hasToken;
         this.controls.generate.textContent = channel.hasToken ? 'Generate a new token' : 'Generate token';
@@ -123,6 +139,33 @@ export class ConfigPage {
     }
   }
 
+  /** The channel keeps its own scale, so the control works before a token exists. */
+  private async saveUiScale(): Promise<void> {
+    const select = this.uiScale;
+    if (this.api === null || select === null) return;
+    const uiScale = Number(select.value);
+    this.chosenScale = uiScale;
+    try {
+      await this.api.saveSettings({ uiScale });
+      this.fail(false);
+    } catch {
+      // The next poll brings back what is actually stored, so the control cannot claim otherwise.
+      this.chosenScale = null;
+      this.fail(true, 'The interface scale could not be saved.');
+    }
+  }
+
+  /** A channel may hold a scale outside the listed steps; offer it rather than misreport it. */
+  private showUiScale(value: number): void {
+    const select = this.uiScale;
+    if (select === null) return;
+    const steps = uiScaleOptions(value).map(formatUiScale);
+    if ([...select.options].map((option) => option.value).join() !== steps.join()) {
+      select.replaceChildren(...steps.map((step) => new Option(step, step)));
+    }
+    select.value = formatUiScale(value);
+  }
+
   private async copy(): Promise<void> {
     const controls = this.controls;
     if (controls === null) return;
@@ -136,12 +179,13 @@ export class ConfigPage {
     }
   }
 
-  private fail(failed: boolean): void {
-    this.view.error.textContent = failed ? 'The backend did not answer. Try again in a moment.' : '';
+  /** Unhidden first: a hidden element has no width, so there is nothing to lay the text into. */
+  private fail(failed: boolean, reason = 'The backend did not answer. Try again in a moment.'): void {
     this.view.error.hidden = !failed;
+    this.type.write(this.view.error, failed ? reason : '');
   }
 }
 
 export function startConfig(root: ParentNode): void {
-  new ConfigPage(root).start();
+  void new ConfigPage(root).start();
 }

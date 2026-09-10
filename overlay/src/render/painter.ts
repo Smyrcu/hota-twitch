@@ -2,15 +2,10 @@ import type { Card, DrawOp } from './display.js';
 import type { FontStore } from './fonts.js';
 import { PanelPainter } from './panel.js';
 import type { SpriteCache } from './sprites.js';
-import { layoutText, type TextAlign } from './text/layout.js';
+import { alignOffset, layoutText } from './text/layout.js';
+import { blitGlyphs } from './text/paint.js';
 
-function anchorOffset(align: TextAlign, width: number): number {
-  if (align === 'center') return -Math.round(width / 2);
-  if (align === 'right') return -width;
-  return 0;
-}
-
-/** Executes a display list on a canvas at scale 1; the canvas itself is upscaled by CSS. */
+/** Executes a display list on a canvas, optionally magnified by a whole factor. */
 export class CardPainter {
   private readonly panels: PanelPainter;
 
@@ -21,7 +16,12 @@ export class CardPainter {
     this.panels = new PanelPainter(sprites);
   }
 
-  paint(context: CanvasRenderingContext2D, card: Card): void {
+  /**
+   * `supersample` magnifies every operation by a whole factor. Sizing a canvas resets its
+   * context, so the transform and the smoothing flag are set here, after the caller has sized it.
+   */
+  paint(context: CanvasRenderingContext2D, card: Card, supersample = 1): void {
+    context.setTransform(supersample, 0, 0, supersample, 0, 0);
     context.imageSmoothingEnabled = false;
     context.clearRect(0, 0, card.width, card.height);
     for (const op of card.ops) this.apply(context, op);
@@ -56,19 +56,6 @@ export class CardPainter {
       ...(op.maxWidth === undefined ? {} : { maxWidth: op.maxWidth }),
       ...(op.maxLines === undefined ? {} : { maxLines: op.maxLines }),
     });
-    const originX = op.x + anchorOffset(op.align, layout.width);
-    for (const glyph of layout.glyphs) {
-      context.drawImage(
-        sheet,
-        glyph.sx,
-        glyph.sy,
-        glyph.sw,
-        glyph.sh,
-        originX + glyph.dx,
-        op.y + glyph.dy,
-        glyph.sw,
-        glyph.sh,
-      );
-    }
+    blitGlyphs(context, sheet, layout.glyphs, op.x + alignOffset(op.align, layout.width), op.y);
   }
 }

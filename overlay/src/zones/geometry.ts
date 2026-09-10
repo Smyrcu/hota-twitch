@@ -69,6 +69,19 @@ export function rowRectInGame(list: ListGeometry, display: Display, row: number)
   };
 }
 
+/**
+ * Where the game frame lands inside the player: the whole video, letterboxed by the contain fit.
+ * The card is sized against this rectangle, so it shrinks and grows with the picture.
+ */
+export function videoRect(game: Size, fit: Fit): Rect {
+  return {
+    x: fit.offsetX,
+    y: fit.offsetY,
+    width: game.width * fit.scale,
+    height: game.height * fit.scale,
+  };
+}
+
 export function mapRect(rect: Rect, fit: Fit): Rect {
   return {
     x: fit.offsetX + rect.x * fit.scale,

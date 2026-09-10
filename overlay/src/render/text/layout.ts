@@ -65,6 +65,13 @@ function wrap(atlas: FontAtlas, text: string, maxWidth: number | undefined, fall
   return lines;
 }
 
+/** How far a laid-out block moves so that its anchor point lands on the requested alignment. */
+export function alignOffset(align: TextAlign, width: number): number {
+  if (align === 'center') return -Math.round(width / 2);
+  if (align === 'right') return -width;
+  return 0;
+}
+
 function originFor(align: TextAlign, lineWidth: number, blockWidth: number): number {
   if (align === 'center') return Math.round((blockWidth - lineWidth) / 2);
   if (align === 'right') return blockWidth - lineWidth;

@@ -10,7 +10,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "serve": "node dev/serve.mjs",
-    "shots": "node dev/screenshots.mjs"
+    "shots": "node build.mjs && node dev/screenshots.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

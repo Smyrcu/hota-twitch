@@ -1,6 +1,16 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { describeConnection } from '../src/config/status.js';
-import { readParams, safeBackground } from '../src/dev/params.js';
+import {
+  DEFAULT_UI_SCALE,
+  UI_SCALES,
+  formatUiScale,
+  readUiScale,
+  settleUiScale,
+  uiScaleOptions,
+} from '../src/config/settings.js';
+import { STYLES } from '../src/config/typography.js';
+import { readParams, safeBackground, safeStateSource } from '../src/dev/params.js';
 import { fortIcon, primaryIcon, skillIcon, townPicture } from '../src/data/sprites.js';
 import { heroClassName, spellName, townTypeName } from '../src/data/names.js';
 
@@ -32,10 +42,92 @@ describe('connection status', () => {
   });
 });
 
+const page = (name: string): string =>
+  readFileSync(new URL(`../public/${name}`, import.meta.url), 'utf8');
+
+describe('mock state source', () => {
+  it('accepts only a bundled document', () => {
+    expect(safeStateSource('dev/state-1080p.json')).toBe('dev/state-1080p.json');
+    expect(safeStateSource('https://evil.example/state.json')).toBeNull();
+    expect(safeStateSource('//evil.example/state.json')).toBeNull();
+    expect(safeStateSource('../../etc/passwd.json')).toBeNull();
+    expect(safeStateSource('dev/state.txt')).toBeNull();
+    expect(safeStateSource(null)).toBeNull();
+  });
+
+  it('is read from the query string alongside the other switches', () => {
+    expect(readParams('?mock=1&state=dev/state-1080p.json').state).toBe('dev/state-1080p.json');
+    expect(readParams('?state=https://evil.example/x.json').state).toBeNull();
+  });
+});
+
+describe('page typography', () => {
+  it('marks up only styles the pages know how to draw', () => {
+    for (const name of ['config.html', 'live_config.html']) {
+      const used = [...page(name).matchAll(/data-font="([^"]*)"/g)].map((match) => match[1]);
+
+      expect(used.length).toBeGreaterThan(0);
+      for (const style of used) expect(Object.keys(STYLES)).toContain(style);
+    }
+  });
+
+  it('draws the title big and the body small, as the game does', () => {
+    expect(STYLES.title.font).toBe('big');
+    expect(STYLES.heading.font).toBe('medium');
+    expect(STYLES.body.font).toBe('small');
+  });
+
+  it('leaves the token selectable rather than drawing it', () => {
+    expect(page('config.html')).toContain('<code data-token-value></code>');
+    expect(page('config.html')).not.toMatch(/data-token-value[^>]*data-font/);
+  });
+});
+
+describe('interface scale', () => {
+  it('offers the steps the HD Mod itself has', () => {
+    expect(UI_SCALES).toEqual([1, 1.25, 1.5, 1.75, 2, 3, 4]);
+  });
+
+  it('keeps the scale the backend sent when the contract allows it', () => {
+    expect(readUiScale(1)).toBe(1);
+    expect(readUiScale(1.75)).toBe(1.75);
+    expect(readUiScale(4)).toBe(4);
+  });
+
+  it('falls back to a plain 1 for anything the contract does not allow', () => {
+    expect(readUiScale(undefined)).toBe(DEFAULT_UI_SCALE);
+    expect(readUiScale(null)).toBe(DEFAULT_UI_SCALE);
+    expect(readUiScale('1.5')).toBe(DEFAULT_UI_SCALE);
+    expect(readUiScale(0.5)).toBe(DEFAULT_UI_SCALE);
+    expect(readUiScale(5)).toBe(DEFAULT_UI_SCALE);
+    expect(readUiScale(Number.NaN)).toBe(DEFAULT_UI_SCALE);
+  });
+
+  it('writes a scale the way the contract spells it', () => {
+    expect(UI_SCALES.map(formatUiScale)).toEqual(['1', '1.25', '1.5', '1.75', '2', '3', '4']);
+  });
+
+  it('offers a channel its own scale when it is not one of the steps', () => {
+    expect(uiScaleOptions(1.5)).toEqual(UI_SCALES);
+    expect(uiScaleOptions(1.4)).toEqual([1, 1.25, 1.4, 1.5, 1.75, 2, 3, 4]);
+    // Each value is offered once, however often it is read back.
+    expect(uiScaleOptions(1.4)).toHaveLength(UI_SCALES.length + 1);
+  });
+
+  it('holds the streamer choice until the backend answers with it', () => {
+    // Nothing in flight: whatever the channel holds is what is shown.
+    expect(settleUiScale(null, 1.5)).toEqual({ show: 1.5, chosen: null });
+    // A poll landing while the choice is on its way must not undo it.
+    expect(settleUiScale(2, 1.5)).toEqual({ show: 2, chosen: 2 });
+    // Once the channel reports the choice, it stops being held.
+    expect(settleUiScale(2, 2)).toEqual({ show: 2, chosen: null });
+  });
+});
+
 describe('page parameters', () => {
   it('reads the mock and debug switches', () => {
-    expect(readParams('?mock=1&debug=1')).toEqual({ mock: true, debug: true, background: null });
-    expect(readParams('')).toEqual({ mock: false, debug: false, background: null });
+    expect(readParams('?mock=1&debug=1')).toEqual({ mock: true, debug: true, background: null, state: null });
+    expect(readParams('')).toEqual({ mock: false, debug: false, background: null, state: null });
   });
 
   it('accepts only a bundled image as the calibration background', () => {

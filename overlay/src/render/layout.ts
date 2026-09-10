@@ -30,12 +30,19 @@ export const PRIMARY_ROW = { y: 60, first: 85, cell: 28, count: 4 } as const;
 export const MANA_FIELD = { centre: 167, y: 102 } as const;
 
 /**
- * The seven army slots as the popup frames them: three centred boxes above four below.
- * `slots` per row, `x` the left edge of the first box, `cell` the pitch.
+ * The seven army slots as the popup frames them: three boxes above four below. `x` is the left
+ * edge of the first box and `cell` the pitch; `y` and `icon` are the box interior; `count` is the
+ * strip of bare leather under the row.
+ *
+ * All of it was read off the bitmap's brightness profile, where every frame runs shadow,
+ * highlight, falloff: the upper boxes hold y 85..116 and their frame ends at y 118, the lower
+ * boxes hold y 133..164 inside a frame that starts at y 130, and the golden border closes the
+ * content at y 178. That leaves two strips of leather, y 119..129 and y 167..177, each exactly
+ * one `tiny` line tall — which is where the counts go, clear of every frame the bitmap draws.
  */
 export const ARMY_ROWS = [
-  { y: 85, x: 45, cell: 36, slots: 3, icon: 32, countY: 118 },
-  { y: 132, x: 29, cell: 36, slots: 4, icon: 32, countY: 166 },
+  { y: 85, x: 45, cell: 36, slots: 3, icon: 32, count: { top: 119, bottom: 130 } },
+  { y: 133, x: 27, cell: 36, slots: 4, icon: 32, count: { top: 167, bottom: 178 } },
 ] as const;
 
 /** Hall and fort icons on the town popup, in the boxes right of the picture. */
@@ -66,13 +73,22 @@ export function cellIconX(origin: number, cell: number, icon: number, index: num
   return origin + cell * index + Math.floor((cell - icon) / 2);
 }
 
+export interface ArmySlot {
+  readonly x: number;
+  readonly y: number;
+  /** Horizontal middle of the box, where the count is centred. */
+  readonly centre: number;
+  readonly icon: number;
+  readonly countY: number;
+}
+
 /** Where army slot `slot` (0..6) sits: the popup frames three boxes above four. */
-export function armySlot(slot: number): { x: number; y: number; centre: number; icon: number; countY: number } | null {
+export function armySlot(slot: number): ArmySlot | null {
   let remaining = slot;
   for (const row of ARMY_ROWS) {
     if (remaining < row.slots) {
       const x = row.x + row.cell * remaining;
-      return { x, y: row.y, centre: x + row.icon / 2, icon: row.icon, countY: row.countY };
+      return { x, y: row.y, centre: x + row.icon / 2, icon: row.icon, countY: row.count.top };
     }
     remaining -= row.slots;
   }
