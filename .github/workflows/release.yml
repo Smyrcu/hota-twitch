@@ -52,7 +52,7 @@ jobs:
             exit 0
           fi
           (cd overlay && npm ci && npm run package)
-          cp overlay/dist/overlay.zip dist/hota-twitch-overlay-${GITHUB_REF_NAME}.zip
+          cp overlay/package/hota-twitch-overlay.zip dist/hota-twitch-overlay-${GITHUB_REF_NAME}.zip
 
       - name: Publish the release
         env:
@@ -78,6 +78,6 @@ jobs:
             # hota-twitch-plugin-v1.2.3.zip -> hota-twitch-plugin.zip, so that the download
             # page can link one URL that never changes.
             stable="${name%-${GITHUB_REF_NAME}.zip}.zip"
-            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/${name}" --endpoint-url "$endpoint"
+            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/${GITHUB_REF_NAME}/${name}" --endpoint-url "$endpoint"
             aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/latest/${stable}" --endpoint-url "$endpoint"
           done
