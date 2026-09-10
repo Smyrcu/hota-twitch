@@ -171,7 +171,8 @@ the viewer wants to see what is happening to the streamer's towns. The plugin ta
 the first player that is.
 
 Note that `isLocal` is `+0xE1` and `isHuman` is `+0xE2`. The spike read `+0xE1` and called it
-`isHuman`; in a local single-player game both are true, so the mix-up never showed.
+`isHuman`; in a local single-player game both are true, so the mix-up never showed. Both are
+confirmed on a live game: the human player reads 1/1 and the seven computer players read 0/0.
 
 ## Towns
 
@@ -181,13 +182,15 @@ hall bit is level 0.
 
 The spike used `town + 0x150` for this and got the right answers on a live game. NH3API calls
 `+0x150` the *visible* buildings mask and `+0x158` the *built* one; the two agree on walls and
-halls, which is why the spike's reading worked. The plugin uses the semantically correct one,
-which makes `+0x158` *unconfirmed* in the same sense as above - a town reporting `fort: 0` at
-the live check would mean NH3API is wrong here too and `+0x150` is what HotA uses.
+halls, which is why the spike's reading worked. `+0x158` is confirmed on a live game: a town
+with a castle and a capitol reads 3/3 and a town with a fort and a village hall reads 1/0, and
+`+0x150` agrees on those bits.
 
 The number of real slots per guild tier comes from `maxTownSpellAvailable[tier]` rather than
 from the fixed 5/4/3/2/1 table, because HotA keeps the count there and it already accounts for
-the Tower's Library, which adds a slot to every tier. The rest of each six-entry row is
+the Tower's Library, which adds a slot to every tier. The array is five bytes, not five 32-bit
+integers: a town without a library reads `05 04 03 02 01` at `+0xBC`. Reading it at the wrong
+width yields six slots per tier and fills them with leftovers. The rest of each six-entry row is
 leftovers and must not be read. Tiers the guild has not been built up to are reported empty:
 the spells are already drawn in memory, but the streamer has not seen them either.
 
