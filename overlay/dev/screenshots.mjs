@@ -9,9 +9,9 @@ const shots = join(here, 'shots');
 const port = 5199;
 
 /**
- * The window the shots show: 1920x1080 with the HD Mod interface at 1.5, which is what the owner
- * plays. Only `display` differs from the hand-written document, so the fixture is derived from it
- * rather than kept as a second copy that could drift.
+ * The window the shots show: 1920x1080 with the HD Mod interface at 1.5, the calibration
+ * reference. Only `display` differs from the hand-written document, so the fixture is derived
+ * from it rather than kept as a second copy that could drift.
  */
 const DISPLAY = { width: 1920, height: 1080, uiScale: 1.5 };
 const fixture = 'dev/generated/state-1080p.json';
