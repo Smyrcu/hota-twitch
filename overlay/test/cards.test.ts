@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardFor } from '../src/render/card.js';
-import { heroHoverCard } from '../src/render/hero/card.js';
+import { heroCard, heroHoverCard } from '../src/render/hero/card.js';
 import { garrisonArmy, townHoverCard } from '../src/render/town/card.js';
 import { CARD_HEIGHT, CARD_WIDTH, EXPANSION } from '../src/render/layout.js';
 import type { LineCounter } from '../src/render/build.js';
@@ -66,6 +66,20 @@ describe('hero card', () => {
 
   it('matches the expanded layout snapshot, with skills, artifacts and backpack', () => {
     expect(cardFor(state, { kind: 'hero', entry: 0, expanded: true, view: 'town' })).toMatchSnapshot();
+  });
+
+  it('lists the equipped artifacts the way the hero screen lays them out', () => {
+    const equipped: [number, number][] = [
+      [18, 118], [12, 89], [0, 36], [6, 45], [2, 108], [5, 40], [3, 35],
+      [4, 34], [1, 72], [8, 98], [7, 67], [9, 63], [10, 87], [11, 96],
+    ];
+    const card = heroCard({ ...hero(0), equipped, backpack: [] }, true);
+    const artifacts = sources(card)
+      .filter((src) => src.startsWith('assets/artifacts/'))
+      .map((src) => Number(src.slice('assets/artifacts/'.length, -'.png'.length)));
+
+    // Head, neck, torso, feet; right hand, left hand, shoulders; the rings; the five miscellaneous slots.
+    expect(artifacts).toEqual([36, 108, 40, 98, 35, 34, 72, 45, 67, 63, 87, 96, 89, 118]);
   });
 
   it('grows the card by the expansion', () => {

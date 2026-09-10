@@ -15,6 +15,18 @@ import {
 } from '../layout.js';
 import type { Hero } from '../../state/protocol.js';
 
+/**
+ * The order the equipped artifacts are listed in, taken from the hero screen: the middle of the
+ * figure from head to feet (head, neck, torso, feet), the hands and the shoulders, the rings, then
+ * the miscellaneous slots.
+ */
+const EQUIPPED_ORDER: readonly number[] = [0, 2, 5, 8, 3, 4, 1, 6, 7, 9, 10, 11, 12, 18];
+
+const slotRank = (slot: number): number => {
+  const rank = EQUIPPED_ORDER.indexOf(slot);
+  return rank === -1 ? EQUIPPED_ORDER.length + slot : rank;
+};
+
 interface GridSpec {
   readonly cell: number;
   readonly icon: number;
@@ -78,7 +90,7 @@ export function heroExpansion(
 
   iconGrid(section, EXPANSION.skill, hero.skills, ([skill, level]) => skillIcon(skill, level), 'Skills');
 
-  const equipped = [...hero.equipped].sort((left, right) => left[0] - right[0]);
+  const equipped = [...hero.equipped].sort((left, right) => slotRank(left[0]) - slotRank(right[0]));
   iconGrid(section, EXPANSION.equipped, equipped, ([, artifact]) => artifactIcon(artifact), 'Artifacts');
 
   iconGrid(section, EXPANSION.backpack, hero.backpack, artifactIcon, `Backpack (${hero.backpack.length})`);
