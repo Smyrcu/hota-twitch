@@ -188,7 +188,7 @@ export class OverlayApp {
     return this.zones.find((zone) => matches(selection, zone)) ?? null;
   }
 
-  /** `drawn` differs from `target` only for an expansion that had to be shrunk to fit. */
+  /** `drawn` differs from `target` only for a card that had to be shrunk to fit the picture. */
   private drawStatus(state: GameState, video: Rect, target: number, drawn: number): void {
     if (this.status === null) return;
     const age = Math.round((Date.now() - state.ts) / 1000);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardScale, placeCard, shrinkToFit, supersampleFactor } from '../src/overlay/scale.js';
+import { MIN_CARD_SCALE, cardScale, placeCard, shrinkToFit, supersampleFactor } from '../src/overlay/scale.js';
 import { CARD_HEIGHT, CARD_WIDTH } from '../src/render/layout.js';
 import { containFit, videoRect } from '../src/zones/index.js';
 
@@ -25,7 +25,27 @@ describe('card scale', () => {
 
   it('keeps the fractional value instead of snapping the card to whole pixels', () => {
     expect(cardScale(1.5, 0.75)).toBeCloseTo(1.125, 10);
-    expect(cardScale(1, 0.4)).toBeCloseTo(0.4, 10);
+    expect(cardScale(2, 0.55)).toBeCloseTo(1.1, 10);
+  });
+
+  it('does not size the card below its bitmaps to match a small player', () => {
+    const game = { width: 2560, height: 1440 };
+
+    // A 1440p stream at interface scale 1 on a 854x480 player would put the card at 65 pixels.
+    const small = cardScale(1, containFit(game, { width: 854, height: 480 }).scale);
+    expect(small).toBe(MIN_CARD_SCALE);
+    expect(small).toBeGreaterThan(containFit(game, { width: 854, height: 480 }).scale);
+    expect(cardScale(1, containFit(game, { width: 2560, height: 1440 }).scale)).toBe(MIN_CARD_SCALE);
+  });
+
+  it('still shrinks a floored card that is taller than the picture, so it always fits', () => {
+    const game = { width: 2560, height: 1440 };
+    const player = { width: 854, height: 480 };
+    const video = videoRect(game, containFit(game, player));
+    const target = cardScale(1, containFit(game, player).scale);
+
+    expect(shrinkToFit(target, card, video)).toBe(MIN_CARD_SCALE);
+    expect(shrinkToFit(target, { width: CARD_WIDTH, height: 864 }, video)).toBeCloseTo(480 / 864, 10);
   });
 
   it('falls back to the bitmap size when the numbers are unusable', () => {

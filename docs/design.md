@@ -43,8 +43,11 @@ bundled; nothing loaded from outside Twitch's CSP.
 
 The card is a replica of the in-game right-click popup: backgrounds `HEROQVBK.PCX` /
 `TOWNQVBK.PCX` (194x186), identical field layout, text in the game's bitmap fonts, sprites
-from the game. The card scales with the player like the HD Mod scales its UI; images and text
-are rendered without smoothing so pixels stay crisp.
+from the game. The card scales with the player like the HD Mod scales its UI, but not below
+the size of its bitmaps: on a small player it stays legible rather than matching the panel.
+Only a card taller than the picture is shrunk further so that it fits. The card is rasterised
+at a whole multiple of its size, so the bitmaps and fonts stay pixel-exact, and then presented
+at the exact size the video calls for with smooth interpolation.
 
 Two levels:
 

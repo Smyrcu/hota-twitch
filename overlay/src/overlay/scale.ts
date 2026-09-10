@@ -1,14 +1,23 @@
 import type { Rect, Size } from '../zones/index.js';
 
 /**
+ * The card is not sized below its bitmaps to match a small player: at that size the bitmap
+ * fonts are unreadable, so the card stays legible and lets go of matching the panel instead.
+ * Only fitting the picture (`shrinkToFit`) can still take it lower, and that step is drawn
+ * with smooth interpolation.
+ */
+export const MIN_CARD_SCALE = 1;
+
+/**
  * How many player pixels one card pixel takes. The game draws the popup at the HD Mod interface
  * scale and the stream then resizes the whole frame onto the player, so the card sits on the
- * video at exactly `uiScale * containFit`. The value is deliberately left fractional: rounding it
- * would make the card a different size from the panel it belongs to.
+ * video at `uiScale * containFit`, floored at `MIN_CARD_SCALE`. Above the floor the value is
+ * deliberately left fractional: rounding it would make the card a different size from the panel
+ * it belongs to.
  */
 export function cardScale(uiScale: number, containFit: number): number {
   const exact = uiScale * containFit;
-  return Number.isFinite(exact) && exact > 0 ? exact : 1;
+  return Number.isFinite(exact) && exact > 0 ? Math.max(exact, MIN_CARD_SCALE) : MIN_CARD_SCALE;
 }
 
 /**
