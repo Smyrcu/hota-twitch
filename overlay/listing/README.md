@@ -58,7 +58,8 @@ Recognition, Music, Viewer Engagement, Streamer Tools.
 
 ### What the documentation does not settle
 
-- **Text lengths.** The page states no character limit for the name, the summary, the
+The form counts characters: Summary and Viewer Summary 140, Description 1024, Author Name and the
+URLs as long as the field takes.
   description, the author name, the support email or the walkthrough. The lengths in
   `listing.md` are our own restraint, not a documented bound; the console enforces whatever it
   enforces at paste time.

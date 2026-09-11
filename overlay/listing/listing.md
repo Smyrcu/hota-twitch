@@ -12,37 +12,32 @@ HotA Overlay
 
 ## Summary
 
+At most 140 characters (the form counts them).
+
 ```
-Viewers hover a hero or a town in the game's right-hand panel on the stream and read the card
-the game itself shows on a right click. A click on the card expands it.
+Hover a hero or a town in the game's right-hand panel to see the popup the game shows on a right click. Click the card to expand it.
+```
+
+## Viewer Summary
+
+At most 140 characters. Optional; shown to viewers while the extension is active.
+
+```
+Hover a hero or a town in the panel on the right to read its card: army, skills, artifacts, mage guild. Click the card to expand it.
 ```
 
 ## Description
 
+At most 1024 characters (the form counts them).
+
 ```
-HotA Overlay puts the game's own information on the stream, so viewers can read a hero or a
-town for themselves instead of waiting for the streamer to open a screen.
+HotA Overlay puts the game's own information on the stream, so viewers can read a hero or a town for themselves.
 
-What a viewer sees. Hovering an entry in the adventure map's right-hand panel opens the popup
-the game draws on a right click: for a hero the portrait, name, class, level, primary skills
-and army; for a town the picture, the hall and the fort, and the garrison. Clicking the card
-expands it — the hero's secondary skills, equipped artifacts, backpack, movement and mana, or
-the town's mage guild with the spells in it, the slot under research and the heroes inside. The
-card is drawn with the game's own bitmaps and fonts and scales with the video, never below its
-own size, so it looks the way it looks in the game and stays legible in a small player. Nothing
-is drawn anywhere else on the video, and nothing is drawn at all until state arrives.
+What a viewer sees: hovering an entry in the adventure map's right-hand panel opens the popup the game draws on a right click. A hero shows portrait, name, class, level, primary skills and army; a town its picture, hall, fort and garrison. Clicking the card expands it: secondary skills, artifacts, backpack, movement and mana, or the mage guild with the spell under research and the heroes inside. The card uses the game's own bitmaps and fonts and scales with the video. Nothing is drawn until state arrives.
 
-What the streamer runs. An application next to the game reads the state of the streamer's own
-game and posts it to this extension's backend service, which forwards it to viewers over
-Twitch's Extension PubSub. The streamer generates a token on the extension's configuration page
-and pastes it into that application once.
+What the streamer runs: a small application next to the game, HotA Twitch Reader, reads the streamer's own game and posts it to the extension's backend, which forwards it over Twitch PubSub. One token, pasted once.
 
-What is sent. Only the streamer's own side of the game, as the streamer sees it: their heroes
-and towns with the names, levels, skills, artifacts, armies, buildings and spells on them, the
-in-game date, the in-game player name and colour, how far the two panel lists are scrolled, and
-the size of the game window. Nothing about the opponent is sent. The extension asks for
-no viewer identity, reads nothing about a viewer, collects no analytics and writes nothing to
-chat.
+What is sent: only the streamer's own heroes and towns, in-game date, player name and colour, panel scroll and window size. No opponent data, no viewer identity, no analytics.
 ```
 
 ## Author Name
@@ -84,22 +79,20 @@ Optional on the form, but it is the address streamers are pointed at, so it is w
 ## EULA or Terms of Service URL
 
 ```
-<publisher fills in>
+https://smyrcu.net/en/h3/twitch/terms
 ```
 
-Required by the form, and nothing is published for it yet: it needs a page stating the terms on
-which a streamer may install and run the extension and the application that feeds it.
+The `/en` prefix matters: the site picks a language from the visitor's location, and a reviewer
+or a validator gets no redirect, so the bare address would show Polish.
 
 ## Privacy Policy URL
 
 ```
-https://smyrcu.net/privacy
+https://smyrcu.net/en/privacy#hota-overlay
 ```
 
-The page behind that address today is the website's own policy, in Polish, and says nothing
-about the extension. Before the version is submitted it has to cover, in English, what the
-extension sends, what the backend service keeps and for how long, and what the streamer's token
-is — otherwise a reviewer following the link reads a policy for something else.
+Section 4 of the policy is about the extension: what the reader sends, what the backend keeps
+and for how long, and what the streamer's token is.
 
 ## Extension Review Channel URL
 
