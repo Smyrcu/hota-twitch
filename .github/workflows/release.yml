@@ -78,6 +78,10 @@ jobs:
             # hota-twitch-plugin-v1.2.3.zip -> hota-twitch-plugin.zip, so that the download
             # page can link one URL that never changes.
             stable="${name%-${GITHUB_REF_NAME}.zip}.zip"
-            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/${GITHUB_REF_NAME}/${name}" --endpoint-url "$endpoint"
-            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/latest/${stable}" --endpoint-url "$endpoint"
+            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/${GITHUB_REF_NAME}/${name}" --endpoint-url "$endpoint" \
+              --cache-control "public, max-age=31536000, immutable"
+            # The CDN in front of the bucket caches by URL, so latest/ must expire quickly or a
+            # new release stays invisible behind the previous one.
+            aws s3 cp "$versioned" "s3://${R2_BUCKET}/${R2_PREFIX}/latest/${stable}" --endpoint-url "$endpoint" \
+              --cache-control "public, max-age=60"
           done
