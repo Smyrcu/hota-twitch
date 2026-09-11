@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+  <title>HotA Overlay</title>
+  <!--
+    The splash the Extensions Manager shows a streamer, so it shows what the extension does
+    rather than repeating the mark: a stream, the game's right-hand panel down its edge, one
+    list entry lit, and the card that opens beside it. Drawn in the colours the overlay paints
+    with; nothing here is taken from the game's own bitmaps.
+  -->
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#6b4f2a" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#6b4f2a" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="tiles" width="16" height="16" patternUnits="userSpaceOnUse">
+      <path d="M16 0v16H0" fill="none" stroke="#3b2d1c" stroke-width="1"/>
+    </pattern>
+    <clipPath id="video">
+      <rect x="18" y="18" width="264" height="124"/>
+    </clipPath>
+  </defs>
+  <rect width="300" height="200" fill="#241a10"/>
+  <rect x="0.5" y="0.5" width="299" height="199" fill="none" stroke="#6b4f2a"/>
+
+  <rect x="18" y="18" width="264" height="124" fill="#1a1005"/>
+  <rect x="18" y="18" width="226" height="124" fill="url(#tiles)"/>
+  <ellipse cx="204" cy="80" rx="86" ry="66" fill="url(#glow)" clip-path="url(#video)"/>
+  <rect x="18.5" y="18.5" width="263" height="123" fill="none" stroke="#6b4f2a"/>
+
+  <g>
+    <rect x="244" y="18" width="38" height="124" fill="#3b2d1c"/>
+    <rect x="244" y="18" width="1" height="124" fill="#6b4f2a"/>
+    <rect x="248" y="24" width="30" height="22" fill="#1a1005" stroke="#6b4f2a"/>
+    <g fill="#6b4f2a">
+      <rect x="248" y="52" width="30" height="7"/>
+      <rect x="248" y="72" width="30" height="7"/>
+      <rect x="248" y="82" width="30" height="7"/>
+      <rect x="248" y="92" width="30" height="7"/>
+      <rect x="248" y="102" width="30" height="7"/>
+    </g>
+    <rect x="247.5" y="61.5" width="31" height="8" fill="#8a6a34" stroke="#ffe794"/>
+  </g>
+
+  <g transform="translate(166 34)">
+    <rect width="68" height="80" fill="#1a1005"/>
+    <rect x="2" y="2" width="64" height="76" fill="#8a6a34"/>
+    <rect x="4" y="4" width="60" height="72" fill="#3b2d1c"/>
+    <rect x="8" y="8" width="52" height="5" fill="#ffe794"/>
+    <rect x="8" y="17" width="24" height="28" fill="#1a1005" stroke="#6b4f2a"/>
+    <circle cx="20" cy="28" r="5.5" fill="#8a6a34"/>
+    <path d="M11.5 45a8.5 8.5 0 0 1 17 0z" fill="#8a6a34"/>
+    <g fill="#d4b24c">
+      <rect x="36" y="19" width="24" height="4"/>
+      <rect x="36" y="27" width="20" height="4"/>
+      <rect x="36" y="35" width="24" height="4"/>
+    </g>
+    <g>
+      <rect x="8" y="52" width="11" height="11" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="21" y="52" width="11" height="11" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="34" y="52" width="11" height="11" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="47" y="52" width="11" height="11" fill="#1a1005" stroke="#6b4f2a"/>
+    </g>
+    <g fill="#ffe794">
+      <rect x="10" y="58.5" width="7" height="2"/>
+      <rect x="23" y="58.5" width="7" height="2"/>
+      <rect x="36" y="58.5" width="7" height="2"/>
+      <rect x="49" y="58.5" width="7" height="2"/>
+    </g>
+  </g>
+
+  <text x="150" y="177" text-anchor="middle" fill="#ffe794" font-size="30" font-weight="bold"
+        font-family="'Liberation Serif', Georgia, 'Times New Roman', serif">HotA Overlay</text>
+</svg>

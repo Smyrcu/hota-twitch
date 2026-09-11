@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <title>HotA Overlay</title>
+  <!--
+    The mark is the shape of the card the extension draws: a bevelled popup with a name plate,
+    a portrait and an army row, in the ground, leather and gold the overlay paints with. It is
+    drawn here rather than taken from the game, whose bitmaps belong to the game.
+  -->
+  <rect width="100" height="100" fill="#241a10"/>
+  <rect x="0.5" y="0.5" width="99" height="99" fill="none" stroke="#6b4f2a"/>
+  <g transform="translate(14 8)">
+    <rect width="72" height="84" fill="#1a1005"/>
+    <rect x="2" y="2" width="68" height="80" fill="#8a6a34"/>
+    <rect x="4" y="4" width="64" height="76" fill="#3b2d1c"/>
+    <rect x="8" y="8" width="56" height="5" fill="#ffe794"/>
+    <g>
+      <rect x="8" y="17" width="26" height="30" fill="#1a1005" stroke="#6b4f2a"/>
+      <circle cx="21" cy="29" r="6" fill="#8a6a34"/>
+      <path d="M12 47a9 9 0 0 1 18 0z" fill="#8a6a34"/>
+    </g>
+    <g fill="#d4b24c">
+      <rect x="38" y="19" width="26" height="4"/>
+      <rect x="38" y="27" width="22" height="4"/>
+      <rect x="38" y="35" width="26" height="4"/>
+      <rect x="38" y="43" width="18" height="4"/>
+    </g>
+    <g>
+      <rect x="8" y="54" width="10" height="10" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="19.5" y="54" width="10" height="10" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="31" y="54" width="10" height="10" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="42.5" y="54" width="10" height="10" fill="#1a1005" stroke="#6b4f2a"/>
+      <rect x="54" y="54" width="10" height="10" fill="#1a1005" stroke="#6b4f2a"/>
+    </g>
+    <g fill="#ffe794">
+      <rect x="10" y="60" width="6" height="2"/>
+      <rect x="21.5" y="60" width="6" height="2"/>
+      <rect x="33" y="60" width="6" height="2"/>
+      <rect x="44.5" y="60" width="6" height="2"/>
+      <rect x="56" y="60" width="6" height="2"/>
+    </g>
+  </g>
+</svg>

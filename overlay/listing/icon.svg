@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <title>HotA Overlay</title>
+  <!--
+    The card of listing/logo.svg reduced to what still reads at the size of a taskbar icon: the
+    plate, a portrait, two lines of text and the army row. The blocks sit on whole pixels so
+    they stay crisp; only the portrait's head and shoulders are curves.
+  -->
+  <rect width="24" height="24" fill="#241a10"/>
+  <rect x="2" y="1" width="20" height="22" fill="#1a1005"/>
+  <rect x="3" y="2" width="18" height="20" fill="#8a6a34"/>
+  <rect x="4" y="3" width="16" height="18" fill="#3b2d1c"/>
+  <rect x="6" y="5" width="12" height="3" fill="#ffe794"/>
+  <g>
+    <rect x="6" y="10" width="6" height="7" fill="#1a1005"/>
+    <circle cx="9" cy="12.6" r="1.8" fill="#d4b24c"/>
+    <path d="M6.6 17a2.4 2.4 0 0 1 4.8 0z" fill="#d4b24c"/>
+  </g>
+  <g fill="#d4b24c">
+    <rect x="13" y="10" width="5" height="2"/>
+    <rect x="13" y="14" width="5" height="2"/>
+  </g>
+  <g fill="#d4b24c">
+    <rect x="6" y="18" width="3" height="2"/>
+    <rect x="11" y="18" width="3" height="2"/>
+    <rect x="16" y="18" width="3" height="2"/>
+  </g>
+</svg>
