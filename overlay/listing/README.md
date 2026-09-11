@@ -126,3 +126,10 @@ cap. A mismatch names the file and fails the run.
 | Version Details → Screenshot Image | `out/hero-hover.png`, `out/hero-expanded.png`, `out/town-hover.png`, `out/town-expanded.png` |
 
 Every text field is in `listing.md`, in the order the form asks for them.
+
+## The images the console holds
+
+`art/logo.png` (100x100), `art/icon.png` (24x24) and `art/discovery.png` (300x200) are the files
+uploaded to the console for version 1.0.0: a golden war horn on dark leather in an ornate frame,
+cut to size from generated artwork. The SVG sources and the renderer's drawn variants are kept
+as the fallback; the screenshots still come from the renderer.
