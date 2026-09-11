@@ -5,7 +5,7 @@ export interface ConnectionStatus {
 
 const STALE_AFTER_SECONDS = 60;
 
-/** What the streamer sees about the plugin: connected with an age, or what is still missing. */
+/** What the streamer sees about the reader: connected with an age, or what is still missing. */
 export function describeConnection(
   hasToken: boolean,
   lastStateAt: string | null,
