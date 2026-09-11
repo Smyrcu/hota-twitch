@@ -11,7 +11,7 @@ export function describeConnection(
   lastStateAt: string | null,
   now: number = Date.now(),
 ): ConnectionStatus {
-  if (!hasToken) return { connected: false, text: 'No token yet. Generate one and paste it into hota-twitch.ini.' };
+  if (!hasToken) return { connected: false, text: 'No token yet. Generate one and paste it into HotA Twitch Reader.' };
   if (lastStateAt === null) return { connected: false, text: 'Token ready, waiting for the first state from the game.' };
 
   const at = Date.parse(lastStateAt);

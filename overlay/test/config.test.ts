@@ -19,7 +19,7 @@ const NOW = Date.parse('2026-09-09T22:00:30Z');
 describe('connection status', () => {
   it('asks for a token first', () => {
     expect(describeConnection(false, null, NOW).connected).toBe(false);
-    expect(describeConnection(false, null, NOW).text).toContain('hota-twitch.ini');
+    expect(describeConnection(false, null, NOW).text).toContain('HotA Twitch Reader');
   });
 
   it('waits for the first state once a token exists', () => {

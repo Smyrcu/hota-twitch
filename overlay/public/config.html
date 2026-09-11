@@ -20,12 +20,12 @@
       <section class="block">
         <h2 data-font="heading">Streamer token</h2>
         <p data-font="body">
-          The token binds the plugin in your game to this channel. It is shown once; generating a
-          new one replaces the old.
+          The token binds the reader you run next to the game to this channel. It is shown once;
+          generating a new one replaces the old.
         </p>
         <div class="buttons">
           <button type="button" class="primary" data-generate>Generate token</button>
-          <button type="button" data-revoke disabled>Revoke</button>
+          <button type="button" data-revoke disabled>Delete token</button>
         </div>
         <div class="token" data-token hidden>
           <code data-token-value></code>
@@ -46,8 +46,12 @@
         <h2 data-font="heading">Setup</h2>
         <ol>
           <li data-font="body">1. Generate the token above and copy it.</li>
-          <li data-font="body">2. Paste it into hota-twitch.ini, next to hota-twitch.dll in your game folder.</li>
-          <li data-font="body">3. Start Heroes III. This page will show “connected” once the game sends its first state.</li>
+          <li data-font="body">
+            2. Download HotA Twitch Reader from
+            <a href="https://smyrcu.net/h3/twitch" target="_blank" rel="noopener">smyrcu.net/h3/twitch</a>,
+            unpack it anywhere, run it and paste the token.
+          </li>
+          <li data-font="body">3. Start Heroes III (HotA) and load your map. This page will show “connected” once the first state arrives.</li>
         </ol>
       </section>
     </main>
