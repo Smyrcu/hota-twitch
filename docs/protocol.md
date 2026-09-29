@@ -140,6 +140,13 @@ PUT    /v1/config/settings  <- { "uiScale": 1.5 }        // 1 ≤ uiScale ≤ 4,
 copies it into `display.uiScale` whenever the producer left the field out or sent `null`, so
 viewers always receive the value the streamer configured.
 
+HD Launcher has no setting by that name. The streamer works it out on the launcher's Main
+Settings tab: the `Resolution:` field (`Source size:` in some versions; Polish `Rozdzielczość:`,
+Russian `Разрешение:` / `Исходный размер:`) is the size the game draws at before it is stretched
+to the screen, and the scale is the screen height divided by that height - the default 1180x664
+on a 1080p screen gives about 1.63. The steps the configuration page offers (1, 1.25, 1.5, 1.75,
+2, 3, 4) are the extension's own, not values the mod lists.
+
 Settings belong to the channel, not to the token: `PUT /v1/config/settings` works before a token
 exists (it creates the channel record), `DELETE /v1/config/token` clears only the token and keeps
 the settings, and `GET /v1/config/channel` always returns `settings` (with `hasToken: false` when
