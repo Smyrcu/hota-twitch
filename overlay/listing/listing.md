@@ -103,7 +103,9 @@ https://www.twitch.tv/smyrcu
 ## Walkthrough Guide and Change Log
 
 ```
-Change log: first version.
+Change log: 1.1.0 adds the icons of the two secondary skills Horn of the Abyss introduced,
+Interference and Runes, so the card draws them for a hero who has learned them like any other
+skill. Nothing else changes: the same capabilities, the same backend, no new network calls.
 
 How the extension gets its data. The overlay draws nothing by itself. An application the
 streamer runs next to Heroes of Might and Magic III: Horn of the Abyss reads the state of the
