@@ -54,7 +54,7 @@ consumer assumes 1 if it is still absent.
   "mana": 27, "manaMax": 390,
   "move": 1500, "moveMax": 1500,
   "primary": [26, 25, 25, 26],    // attack, defense, power, knowledge — effective values as the game's popup shows them (artifacts included)
-  "skills": [[7, 3], [19, 2]],    // [skill id 0..29, level 1..3]; 28 Interference, 29 Runes
+  "skills": [[7, 3], [19, 2]],    // [skill id 0..29, level 1..3], in the hero's slot order; 28 Interference, 29 Runes
   "equipped": [[0, 12], [18, 143]],  // [body slot, artifact id]; slots 0..12 and 18 only — 13..17 (war machines, spellbook) omitted
   "backpack": [5, 7, 122],        // artifact ids in backpack order
   "army": [[0, 13, 3], [1, 110, 15]] // [slot 0..6, creature id, count]; empty slots omitted
