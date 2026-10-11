@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { describeConnection } from '../src/config/status.js';
 import {
@@ -186,6 +186,13 @@ describe('id tables', () => {
     expect(skillIcon(7, 3)).toBe('assets/skills/7_3.png');
     expect(primaryIcon(0)).toBe('assets/primary/attack.png');
     expect(primaryIcon(3)).toBe('assets/primary/knowledge.png');
+  });
+
+  it('ships an icon for every level of all 30 skills, Interference and Runes included', () => {
+    const missing = Array.from({ length: 30 }, (_, skill) => [1, 2, 3].map((level) => skillIcon(skill, level)))
+      .flat()
+      .filter((path) => !existsSync(new URL(`../${path}`, import.meta.url)));
+    expect(missing).toEqual([]);
   });
 });
 

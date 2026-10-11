@@ -201,11 +201,11 @@ pixel-for-pixel against known-correct icons.
 | `ui/hall-*.png`, `ui/fort-*.png` | `h3sprites.cs frames hallfort.def <dir>` (or `itmtl.def` — both exist; confirm which one and the frame-to-level mapping before trusting it) | not confirmed |
 | `ui/frame-*.png`, `ui/leather.png` | source resource not identified | — |
 | `primary/*.png` | `h3sprites.cs frames PSKILL.def <dir>` (candidate; frame-to-stat mapping not confirmed) | not confirmed |
-| `skills/*.png` | `h3sprites.cs frames Secskill.def <dir>` (candidate) | not confirmed |
+| `skills/<id>_<level>.png` | `h3lodmem.cs frames SECSK32.def <dir>`, then renamed | `frame = 3 + 3 * id + level - 1`; 93 frames cover HotA's 30 skills, Interference (28) and Runes (29) included |
 | `towns/*.png` | source resource not identified | — |
 
 Current counts: heroes 245 small and 245 large (picture ids 0-244), creatures 200 (0-199),
-artifacts 167 (0-166), spells 91 (0-90).
+artifacts 167 (0-166), spells 91 (0-90), skills 90 (ids 0-29, three levels each).
 
 One asset does not match its slot: picture id 180, `HCVC02.pcx`, decodes to 58x65 where every
 other large portrait is 58x64. The extra row carries image data rather than padding, so the export
