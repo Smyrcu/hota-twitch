@@ -201,7 +201,7 @@ pixel-for-pixel against known-correct icons.
 | `ui/hall-*.png`, `ui/fort-*.png` | `h3sprites.cs frames hallfort.def <dir>` (or `itmtl.def` — both exist; confirm which one and the frame-to-level mapping before trusting it) | not confirmed |
 | `ui/frame-*.png`, `ui/leather.png` | source resource not identified | — |
 | `primary/*.png` | `h3sprites.cs frames PSKILL.def <dir>` (candidate; frame-to-stat mapping not confirmed) | not confirmed |
-| `skills/<id>_<level>.png` | `h3lodmem.cs frames SECSK32.def <dir>`, then renamed | `frame = 3 + 3 * id + level - 1`; 93 frames cover HotA's 30 skills, Interference (28) and Runes (29) included |
+| `skills/<id>_<level>.png` | `h3lodmem.cs frames SECSK32.def <dir>`, then renamed | `id = (frame - 3) / 3`, `level = (frame - 3) % 3 + 1`; HotA's sheet has 93 frames, Interference (28) and Runes (29) included. Checked pixel-for-pixel against `0_1`, `13_2` and `27_3` |
 | `towns/*.png` | source resource not identified | — |
 
 Current counts: heroes 245 small and 245 large (picture ids 0-244), creatures 200 (0-199),
