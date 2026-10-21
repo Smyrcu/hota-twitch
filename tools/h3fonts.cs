@@ -4,14 +4,18 @@
 #:property PublishAot=false
 #:property TreatWarningsAsErrors=true
 
-// Exports the Heroes III bitmap fonts from Data/h3bitmap.lod to overlay/assets/fonts/ as a
-// white, alpha-only atlas PNG plus a JSON glyph table (design spec section 3 "Fonts").
+// Exports the Heroes III bitmap fonts to overlay/assets/fonts/ as a white, alpha-only atlas PNG
+// plus a JSON glyph table keyed by Unicode code point (design spec section 3 "Fonts"). Each atlas
+// is the English game's font from Data/h3bitmap.lod (Windows-1252) with the Cyrillic letters of
+// the Russian release's font added, which the HD Mod carries in _HD3_Data/Common/Rus.Fonts
+// (Windows-1251).
 //
 //   dotnet run h3fonts.cs -- export
 //   dotnet run h3fonts.cs -- render <font> <text> <out.png>   # verification render, PNG+JSON only
 
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using H3Assets;
@@ -20,6 +24,9 @@ using SixLabors.ImageSharp.PixelFormats;
 
 const string GameDir = "/home/smyrcu/Games/Heroic/Heroes of Might and Magic III - Horn of the Abyss";
 const string BitmapLodPath = "Data/h3bitmap.lod";
+const string CyrillicFontsPath = "_HD3_Data/Common/Rus.Fonts";
+const int WesternCodePage = 1252;
+const int CyrillicCodePage = 1251;
 const int AtlasMaxWidth = 512;
 
 (string LodName, string OutName)[] fonts =
@@ -36,13 +43,16 @@ var fontsDir = Path.Combine(RepoRoot(), "overlay", "assets", "fonts");
 
 if (args.Length == 0 || args[0] == "export")
 {
+    Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
     var lod = LodArchive.Open(Path.Combine(GameDir, BitmapLodPath));
     Directory.CreateDirectory(fontsDir);
     foreach (var (lodName, outName) in fonts)
     {
-        var font = BitmapFont.Parse(lod.Read(lod.Find(lodName)));
-        ExportFont(font, outName, fontsDir);
-        Console.WriteLine($"{lodName} -> {outName}.png + {outName}.json (lineHeight={font.LineHeight})");
+        var western = BitmapFont.Parse(lod.Read(lod.Find(lodName)));
+        var cyrillic = BitmapFont.Parse(File.ReadAllBytes(Path.Combine(GameDir, CyrillicFontsPath, lodName)));
+        var glyphs = GlyphSources(western, cyrillic);
+        ExportFont(western.LineHeight, glyphs, outName, fontsDir);
+        Console.WriteLine($"{lodName} -> {outName}.png + {outName}.json (lineHeight={western.LineHeight}, {glyphs.Count} glyphs)");
     }
 
     return 0;
@@ -57,60 +67,117 @@ if (args[0] == "render" && args.Length == 4)
 Console.Error.WriteLine("usage: export | render <font> <text> <out.png>");
 return 1;
 
-static void ExportFont(BitmapFont font, string name, string outDir)
+// Every glyph of the western font under the code point its byte stands for in Windows-1252, then
+// the Russian font's upper half under its Windows-1251 code points where the western font has no
+// glyph of its own. The Russian font is a separate design with a shorter line, so its glyphs are
+// lowered onto the western baseline rather than hung from the top of the line.
+static SortedDictionary<int, GlyphSource> GlyphSources(BitmapFont western, BitmapFont cyrillic)
 {
-    var placements = new (int X, int Y)[256];
-    var cursorX = 0;
-    var cursorY = 0;
-    var atlasWidth = 0;
-    for (var code = 0; code < 256; code++)
+    var sources = new SortedDictionary<int, GlyphSource>();
+    AddCodePage(sources, western, WesternCodePage, 0, 0);
+
+    var shift = Baseline(western) - Baseline(cyrillic);
+    if (shift < 0 || cyrillic.LineHeight + shift > western.LineHeight)
     {
-        var glyph = font.Glyphs[code];
-        if (glyph.Width == 0)
+        throw new InvalidDataException(
+            $"the Russian font (line {cyrillic.LineHeight}) does not fit the western line ({western.LineHeight}) lowered by {shift}");
+    }
+
+    AddCodePage(sources, cyrillic, CyrillicCodePage, 0x80, shift);
+    return sources;
+}
+
+static void AddCodePage(SortedDictionary<int, GlyphSource> sources, BitmapFont font, int codePage, int firstCode, int shift)
+{
+    var encoding = Encoding.GetEncoding(codePage);
+    for (var code = firstCode; code < 256; code++)
+    {
+        // A byte the code page leaves undefined comes back as a C1 control: nothing to draw.
+        var character = encoding.GetString([(byte)code])[0];
+        if (char.IsControl(character))
         {
             continue;
         }
 
-        if (cursorX + glyph.Width > AtlasMaxWidth)
+        if (sources.TryGetValue(character, out var held) && (held.Metrics.Width > 0 || character == ' '))
         {
-            cursorX = 0;
-            cursorY += font.LineHeight;
+            continue;
         }
 
-        placements[code] = (cursorX, cursorY);
-        atlasWidth = Math.Max(atlasWidth, cursorX + (int)glyph.Width);
-        cursorX += (int)glyph.Width;
+        sources[character] = new GlyphSource(font, code, shift);
+    }
+}
+
+// The row the capital H stands on: the one line both designs agree on.
+static int Baseline(BitmapFont font)
+{
+    var width = (int)font.Glyphs['H'].Width;
+    var pixels = font.GlyphPixels('H');
+    for (var row = font.LineHeight - 1; row >= 0; row--)
+    {
+        if (pixels.Slice(row * width, width).ContainsAnyExcept((byte)0))
+        {
+            return row;
+        }
     }
 
-    var atlasHeight = cursorY + font.LineHeight;
+    throw new InvalidDataException("the font's H has no pixels");
+}
+
+static void ExportFont(int lineHeight, SortedDictionary<int, GlyphSource> sources, string name, string outDir)
+{
+    var placements = new Dictionary<int, (int X, int Y)>();
+    var cursorX = 0;
+    var cursorY = 0;
+    var atlasWidth = 0;
+    foreach (var (codePoint, source) in sources)
+    {
+        var width = (int)source.Metrics.Width;
+        if (width == 0)
+        {
+            continue;
+        }
+
+        if (cursorX + width > AtlasMaxWidth)
+        {
+            cursorX = 0;
+            cursorY += lineHeight;
+        }
+
+        placements[codePoint] = (cursorX, cursorY);
+        atlasWidth = Math.Max(atlasWidth, cursorX + width);
+        cursorX += width;
+    }
+
+    var atlasHeight = cursorY + lineHeight;
     using var atlas = new Image<Rgba32>(Math.Max(1, atlasWidth), Math.Max(1, atlasHeight));
 
     var glyphsJson = new Dictionary<string, GlyphJson>();
-    for (var code = 0; code < 256; code++)
+    foreach (var (codePoint, source) in sources)
     {
-        var glyph = font.Glyphs[code];
-        var key = code.ToString(CultureInfo.InvariantCulture);
+        var glyph = source.Metrics;
+        var key = codePoint.ToString(CultureInfo.InvariantCulture);
         if (glyph.Width == 0)
         {
             glyphsJson[key] = new GlyphJson(0, 0, 0, 0, glyph.Left, glyph.Advance);
             continue;
         }
 
-        var (x, y) = placements[code];
-        var alphas = font.GlyphPixels(code);
-        for (var row = 0; row < font.LineHeight; row++)
+        var (x, y) = placements[codePoint];
+        var alphas = source.Font.GlyphPixels(source.Code);
+        for (var row = 0; row < source.Font.LineHeight; row++)
         {
             for (var col = 0; col < glyph.Width; col++)
             {
-                atlas[x + col, y + row] = new Rgba32(255, 255, 255, alphas[row * (int)glyph.Width + col]);
+                atlas[x + col, y + source.Shift + row] = new Rgba32(255, 255, 255, alphas[row * (int)glyph.Width + col]);
             }
         }
 
-        glyphsJson[key] = new GlyphJson(x, y, (int)glyph.Width, font.LineHeight, glyph.Left, glyph.Advance);
+        glyphsJson[key] = new GlyphJson(x, y, (int)glyph.Width, lineHeight, glyph.Left, glyph.Advance);
     }
 
     atlas.SaveAsPng(Path.Combine(outDir, $"{name}.png"));
-    var fontJson = new FontJson(name, font.LineHeight, glyphsJson);
+    var fontJson = new FontJson(name, lineHeight, glyphsJson);
     File.WriteAllText(Path.Combine(outDir, $"{name}.json"), JsonSerializer.Serialize(fontJson));
 }
 
@@ -122,9 +189,9 @@ static void RenderText(string fontsDir, string fontName, string text, string out
 
     const int padding = 4;
     var glyphs = new List<GlyphJson?>(text.Length);
-    foreach (var c in text)
+    foreach (var rune in text.EnumerateRunes())
     {
-        var key = ((byte)c).ToString(CultureInfo.InvariantCulture);
+        var key = rune.Value.ToString(CultureInfo.InvariantCulture);
         glyphs.Add(fontJson.Glyphs.TryGetValue(key, out var glyph) ? glyph : null);
     }
 
@@ -188,6 +255,11 @@ static Rgba32 AlphaBlend(Rgba32 background, Rgba32 foreground)
 static string RepoRoot([CallerFilePath] string sourcePath = "")
 {
     return Directory.GetParent(Path.GetDirectoryName(sourcePath)!)!.FullName;
+}
+
+sealed record GlyphSource(BitmapFont Font, int Code, int Shift)
+{
+    public GlyphMetrics Metrics => Font.Glyphs[Code];
 }
 
 sealed record GlyphJson(

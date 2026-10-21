@@ -86,6 +86,13 @@ only inside zones).
 { "name": "smalfont", "lineHeight": 12, "glyphs": { "65": { "x": 0, "y": 0, "w": 7, "h": 12, "left": 0, "advance": 8 } } }
 ```
 
+Glyphs are keyed by Unicode code point. Each atlas is the English game's font (Windows-1252) with
+the Cyrillic of the Russian release's font added (Windows-1251, from the HD Mod's
+`_HD3_Data/Common/Rus.Fonts`), lowered onto the English baseline; where both have a glyph for a
+code point the English one is kept. A character the atlas lacks is drawn as its letter without the
+accent where there is one, and as `?` otherwise. There are no Polish letters: no Polish font is at
+hand, so `ą` is drawn as `a` and `ł` as `?`.
+
 The atlas holds white glyphs with alpha; the overlay tints them (white, yellow, gold — the
 game's text colours) and lays text out glyph by glyph. Fonts used: `bigfont` (names),
 `MedFont`, `smalfont`, `tiny` (counts).

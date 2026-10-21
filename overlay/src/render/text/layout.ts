@@ -36,9 +36,24 @@ function measure(atlas: FontAtlas, codes: readonly number[], fallback: number): 
   return codes.reduce((width, code) => width + advanceOf(atlas, code, fallback), 0);
 }
 
-function codesOf(text: string): number[] {
+const QUESTION_MARK = 63;
+
+/**
+ * The code drawn for a character. One the atlas lacks is drawn as its letter without the accent
+ * where the atlas has that ("ą" as "a"), and as a question mark otherwise: a name that loses
+ * letters silently reads as a data error rather than as a font without them.
+ */
+function drawnCode(atlas: FontAtlas, character: string): number {
+  const code = character.codePointAt(0) ?? 0;
+  if (glyphFor(atlas, code) !== undefined) return code;
+  const base = character.normalize('NFD').codePointAt(0) ?? code;
+  if (base !== code && glyphFor(atlas, base) !== undefined) return base;
+  return glyphFor(atlas, QUESTION_MARK) === undefined ? code : QUESTION_MARK;
+}
+
+function codesOf(atlas: FontAtlas, text: string): number[] {
   const codes: number[] = [];
-  for (const character of text) codes.push(character.codePointAt(0) ?? 0);
+  for (const character of text) codes.push(drawnCode(atlas, character));
   return codes;
 }
 
@@ -46,12 +61,12 @@ function wrap(atlas: FontAtlas, text: string, maxWidth: number | undefined, fall
   const lines: number[][] = [];
   for (const paragraph of text.split('\n')) {
     if (maxWidth === undefined) {
-      lines.push(codesOf(paragraph));
+      lines.push(codesOf(atlas, paragraph));
       continue;
     }
     let current: number[] = [];
     for (const word of paragraph.split(' ')) {
-      const codes = codesOf(word);
+      const codes = codesOf(atlas, word);
       const candidate = current.length === 0 ? codes : [...current, 32, ...codes];
       if (current.length > 0 && measure(atlas, candidate, fallback) > maxWidth) {
         lines.push(current);

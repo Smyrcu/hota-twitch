@@ -32,8 +32,8 @@ packages would otherwise use. Even with it, `dotnet test` reports "Zero tests ra
 so the command above starts the xunit v3 in-process runner directly and is the one to rely on.
 
 All scripts read from a hardcoded `GameDir` constant pointing at the local Heroes III install
-(`Data/h3bitmap.lod`, `Data/h3sprite.lod`, `Data/HotA.lod`); update it if you run these on a
-different machine.
+(`Data/h3bitmap.lod`, `Data/h3sprite.lod`, `Data/HotA.lod`; `h3fonts.cs` also the Russian fonts the
+HD Mod keeps in `_HD3_Data/Common/Rus.Fonts`); update it if you run these on a different machine.
 
 Commands that write to a fixed location — `h3fonts.cs`, `h3popups.cs`, and `h3lodmem.cs`'s `names`
 and `portraits` — resolve it from the script file's own path (`[CallerFilePath]`) and so work from

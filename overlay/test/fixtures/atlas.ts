@@ -2,7 +2,8 @@ import type { FontAtlas } from '../../src/render/text/atlas.js';
 
 /**
  * A synthetic atlas in the format `tools/` exports: fixed 6x10 glyphs for A, B and a space,
- * plus a narrow 'i' so tests can tell advance and left side bearing apart.
+ * plus a narrow 'i' so tests can tell advance and left side bearing apart, a question mark and a
+ * Cyrillic 'В' keyed by its code point.
  */
 export const TEST_ATLAS: FontAtlas = {
   name: 'test',
@@ -12,5 +13,7 @@ export const TEST_ATLAS: FontAtlas = {
     '65': { x: 0, y: 0, w: 6, h: 10, left: 0, advance: 7 },
     '66': { x: 6, y: 0, w: 6, h: 10, left: 0, advance: 7 },
     '105': { x: 12, y: 0, w: 2, h: 10, left: 1, advance: 4 },
+    '63': { x: 14, y: 0, w: 5, h: 10, left: 0, advance: 6 },
+    '1042': { x: 19, y: 0, w: 6, h: 10, left: 0, advance: 7 },
   },
 };

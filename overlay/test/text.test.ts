@@ -18,8 +18,18 @@ describe('bitmap text layout', () => {
     expect(measureText(TEST_ATLAS, 'A B')).toBe(7 + 4 + 7);
   });
 
-  it('uses the space advance for characters the atlas does not have', () => {
-    expect(measureText(TEST_ATLAS, 'AŻB')).toBe(7 + 4 + 7);
+  it('finds a Cyrillic letter by its code point', () => {
+    expect(layoutText(TEST_ATLAS, 'ВA').glyphs.map((glyph) => glyph.code)).toEqual([1042, 65]);
+  });
+
+  it('draws a letter the atlas does not have without its accent, or as a question mark', () => {
+    expect(layoutText(TEST_ATLAS, 'ÄЖB').glyphs.map((glyph) => glyph.code)).toEqual([65, 63, 66]);
+    expect(measureText(TEST_ATLAS, 'ÄЖB')).toBe(7 + 6 + 7);
+  });
+
+  it('uses the space advance when the atlas has no question mark either', () => {
+    const { '63': _, ...glyphs } = TEST_ATLAS.glyphs;
+    expect(measureText({ ...TEST_ATLAS, glyphs }, 'AЖB')).toBe(7 + 4 + 7);
   });
 
   it('wraps on word boundaries and reports the block height', () => {
