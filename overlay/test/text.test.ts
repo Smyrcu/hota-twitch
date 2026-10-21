@@ -22,8 +22,9 @@ describe('bitmap text layout', () => {
     expect(layoutText(TEST_ATLAS, 'ВA').glyphs.map((glyph) => glyph.code)).toEqual([1042, 65]);
   });
 
-  it('draws a letter the atlas does not have without its accent, or as a question mark', () => {
+  it('draws a letter the atlas does not have without its accent or stroke, or as a question mark', () => {
     expect(layoutText(TEST_ATLAS, 'ÄЖB').glyphs.map((glyph) => glyph.code)).toEqual([65, 63, 66]);
+    expect(layoutText(TEST_ATLAS, 'ı').glyphs.map((glyph) => glyph.code)).toEqual([105]);
     expect(measureText(TEST_ATLAS, 'ÄЖB')).toBe(7 + 6 + 7);
   });
 

@@ -32,6 +32,17 @@ describe('state decoding', () => {
     expect(result.state.towns[0]?.visitingHero?.name).toBe('Кирра');
   });
 
+  it('draws the name when localName is null, and rejects one that is not a string', () => {
+    const document = valid();
+    const heroes = document['heroes'] as Record<string, unknown>[];
+    heroes[0] = { ...heroes[0], localName: null };
+    const result = decode(document);
+    expect(result.ok && result.state.heroes[0]?.name).toBe('Todd');
+
+    heroes[0] = { ...heroes[0], localName: 7 };
+    expect(decode(document).ok).toBe(false);
+  });
+
   it('defaults uiScale to 1 when the producer cannot read it', () => {
     const document = valid();
     document['display'] = { width: 1920, height: 1080 };

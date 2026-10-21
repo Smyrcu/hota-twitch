@@ -38,15 +38,18 @@ function measure(atlas: FontAtlas, codes: readonly number[], fallback: number): 
 
 const QUESTION_MARK = 63;
 
+/** Letters whose stroke is part of the letter, so that Unicode gives them no plain letter to fall back to. */
+const STROKED: Readonly<Record<string, string>> = { ł: 'l', Ł: 'L', đ: 'd', Đ: 'D', ħ: 'h', Ħ: 'H', ı: 'i' };
+
 /**
  * The code drawn for a character. One the atlas lacks is drawn as its letter without the accent
- * where the atlas has that ("ą" as "a"), and as a question mark otherwise: a name that loses
- * letters silently reads as a data error rather than as a font without them.
+ * where the atlas has that ("ą" as "a", "ł" as "l"), and as a question mark otherwise: a name that
+ * loses letters silently reads as a data error rather than as a font without them.
  */
 function drawnCode(atlas: FontAtlas, character: string): number {
   const code = character.codePointAt(0) ?? 0;
   if (glyphFor(atlas, code) !== undefined) return code;
-  const base = character.normalize('NFD').codePointAt(0) ?? code;
+  const base = (STROKED[character] ?? character.normalize('NFD')).codePointAt(0) ?? code;
   if (base !== code && glyphFor(atlas, base) !== undefined) return base;
   return glyphFor(atlas, QUESTION_MARK) === undefined ? code : QUESTION_MARK;
 }

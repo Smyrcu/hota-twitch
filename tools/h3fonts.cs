@@ -8,7 +8,7 @@
 // plus a JSON glyph table keyed by Unicode code point (design spec section 3 "Fonts"). Each atlas
 // is the English game's font from Data/h3bitmap.lod (Windows-1252) with the Cyrillic letters of
 // the Russian release's font added, which the HD Mod carries in _HD3_Data/Common/Rus.Fonts
-// (Windows-1251).
+// (Windows-1251) - for every font but verd10b, whose Russian copy has none.
 //
 //   dotnet run h3fonts.cs -- export
 //   dotnet run h3fonts.cs -- render <font> <text> <out.png>   # verification render, PNG+JSON only
@@ -50,9 +50,10 @@ if (args.Length == 0 || args[0] == "export")
     {
         var western = BitmapFont.Parse(lod.Read(lod.Find(lodName)));
         var cyrillic = BitmapFont.Parse(File.ReadAllBytes(Path.Combine(GameDir, CyrillicFontsPath, lodName)));
-        var glyphs = GlyphSources(western, cyrillic);
+        var hasCyrillic = HasLettersOfItsOwn(western, cyrillic);
+        var glyphs = GlyphSources(western, hasCyrillic ? cyrillic : null);
         ExportFont(western.LineHeight, glyphs, outName, fontsDir);
-        Console.WriteLine($"{lodName} -> {outName}.png + {outName}.json (lineHeight={western.LineHeight}, {glyphs.Count} glyphs)");
+        Console.WriteLine($"{lodName} -> {outName}.png + {outName}.json (lineHeight={western.LineHeight}, {glyphs.Count} glyphs{(hasCyrillic ? "" : ", no Cyrillic")})");
     }
 
     return 0;
@@ -71,10 +72,14 @@ return 1;
 // the Russian font's upper half under its Windows-1251 code points where the western font has no
 // glyph of its own. The Russian font is a separate design with a shorter line, so its glyphs are
 // lowered onto the western baseline rather than hung from the top of the line.
-static SortedDictionary<int, GlyphSource> GlyphSources(BitmapFont western, BitmapFont cyrillic)
+static SortedDictionary<int, GlyphSource> GlyphSources(BitmapFont western, BitmapFont? cyrillic)
 {
     var sources = new SortedDictionary<int, GlyphSource>();
     AddCodePage(sources, western, WesternCodePage, 0, 0);
+    if (cyrillic is null)
+    {
+        return sources;
+    }
 
     var shift = Baseline(western) - Baseline(cyrillic);
     if (shift < 0 || cyrillic.LineHeight + shift > western.LineHeight)
@@ -106,6 +111,22 @@ static void AddCodePage(SortedDictionary<int, GlyphSource> sources, BitmapFont f
 
         sources[character] = new GlyphSource(font, code, shift);
     }
+}
+
+// Whether the Russian font's letters at 0xC0-0xFF are its own. The HD Mod's verd10b.fnt is the
+// western font over again, Latin-1 letters where the Cyrillic would be; taken for Cyrillic it would
+// draw "Ïðèâåò" for "Привет".
+static bool HasLettersOfItsOwn(BitmapFont western, BitmapFont cyrillic)
+{
+    for (var code = 0xC0; code < 256; code++)
+    {
+        if (western.Glyphs[code] != cyrillic.Glyphs[code] || !western.GlyphPixels(code).SequenceEqual(cyrillic.GlyphPixels(code)))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 // The row the capital H stands on: the one line both designs agree on.
