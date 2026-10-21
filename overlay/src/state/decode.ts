@@ -120,11 +120,21 @@ function list<T>(value: unknown, path: string, decode: (value: unknown, path: st
   return array(value, path).map((item, index) => decode(item, `${path}[${index}]`));
 }
 
+/**
+ * The name to draw. A producer sends the name in the game's own letters as `localName`, next to a
+ * `name` an overlay without those letters can still draw; this one draws them.
+ */
+function shownName(raw: Record<string, unknown>, path: string): string {
+  const name = str(raw['name'], `${path}.name`);
+  const local = raw['localName'];
+  return local === undefined || local === null ? name : str(local, `${path}.localName`);
+}
+
 function decodeHero(value: unknown, path: string): Hero {
   const raw = record(value, path);
   return {
     id: int(raw['id'], `${path}.id`),
-    name: str(raw['name'], `${path}.name`),
+    name: shownName(raw, path),
     class: int(raw['class'], `${path}.class`),
     picture: int(raw['picture'], `${path}.picture`),
     level: int(raw['level'], `${path}.level`),
@@ -155,7 +165,7 @@ function decodeTown(value: unknown, path: string): Town {
   const raw = record(value, path);
   return {
     id: int(raw['id'], `${path}.id`),
-    name: str(raw['name'], `${path}.name`),
+    name: shownName(raw, path),
     type: int(raw['type'], `${path}.type`),
     fort: int(raw['fort'], `${path}.fort`),
     hall: int(raw['hall'], `${path}.hall`),

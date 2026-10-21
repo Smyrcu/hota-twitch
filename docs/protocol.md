@@ -9,6 +9,12 @@ JSON, UTF-8, camelCase. Ids are the game's own ids (creature, artifact, spell, s
 town type, hero picture). Names are sent only where the overlay has no table: hero names and
 town names. Everything else is looked up in the overlay.
 
+A hero or a town may carry `localName` next to `name`: the name in the game's own letters (Cyrillic
+from a Russian game), sent when it differs from `name`. `name` then holds what an overlay whose fonts
+have only the western letters can draw: the English game's name for it, or the name spelled in
+English letters. An overlay that draws the game's letters shows `localName` when it is present.
+The producer leaves it out when the streamer asked for the names in English.
+
 ```jsonc
 {
   "v": 1,

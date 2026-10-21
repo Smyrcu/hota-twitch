@@ -22,6 +22,16 @@ describe('state decoding', () => {
     expect(result.state.towns[1]?.garrisonHero?.name).toBe('Sandro');
   });
 
+  it('draws the name in the game\'s own letters when the producer sends it', () => {
+    const result = decodeJson(readFileSync(new URL('../dev/state-ru.json', import.meta.url), 'utf8'));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.state.heroes[0]?.name).toBe('Тодд');
+    expect(result.state.towns[0]?.name).toBe('Вальтара');
+    expect(result.state.towns[0]?.visitingHero?.name).toBe('Кирра');
+  });
+
   it('defaults uiScale to 1 when the producer cannot read it', () => {
     const document = valid();
     document['display'] = { width: 1920, height: 1080 };
