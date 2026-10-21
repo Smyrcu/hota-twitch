@@ -49,7 +49,7 @@ function researchIndex(level: readonly number[], research: Research): number {
 const GUILD_LEVELS = 5;
 
 /** The roll count's box in the icon's bottom-right corner: medfont digits, a gold rim on a dark fill. */
-const ROLL_BADGE = { digit: 9, padding: 2, height: 16, inkTop: 3 } as const;
+const ROLL_BADGE = { digit: 9, padding: 2, height: 16, inkTop: 2 } as const;
 
 /**
  * How many rolls a slot took, as a figure in the icon's corner. Nothing is drawn below one roll:
