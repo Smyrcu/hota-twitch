@@ -123,7 +123,10 @@ Found by the spike on 2026-09-09 by diffing memory across a research roll, and c
 the owner: rolling Town Portal into a slot and accepting it moved the counter as expected, and
 closing the research set both `+0xA0` and `+0xA4` back to -1. That is why `rolls` is only
 meaningful while research is open, which matches what `docs/protocol.md` says about `research`
-being null the rest of the time.
+being null the rest of the time. Closing it also sets the slot's state to 0, the same value as a
+slot the tier does not have, so nothing in the record says the slot was ever researched: the
+producer keeps the count it last read for the slot and reports it under `researched` while the
+slot still holds the same spell.
 
 Because SoD uses this field for something else, the value is not trusted blindly. It has to be
 four-byte aligned, `VirtualQuery` has to agree that all `0xD0` bytes are committed and readable,
