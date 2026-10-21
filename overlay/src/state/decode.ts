@@ -172,6 +172,8 @@ function decodeTown(value: unknown, path: string): Town {
     guild: int(raw['guild'], `${path}.guild`),
     spells: list(raw['spells'], `${path}.spells`, (level, levelPath) => list(level, levelPath, int)),
     research: optional(raw['research'], `${path}.research`, decodeResearch),
+    // Added after the first readers shipped, so a document without it is still a valid one.
+    researched: raw['researched'] === undefined ? [] : list(raw['researched'], `${path}.researched`, decodeResearch),
     garrison: list(raw['garrison'], `${path}.garrison`, decodeArmy),
     garrisonHero: optional(raw['garrisonHero'], `${path}.garrisonHero`, decodeHero),
     visitingHero: optional(raw['visitingHero'], `${path}.visitingHero`, decodeHero),

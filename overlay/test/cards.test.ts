@@ -118,13 +118,32 @@ describe('town card', () => {
     expect(cardFor(state, { kind: 'town', entry: 0, expanded: true, view: 'town' })).toMatchSnapshot();
   });
 
-  it('dims the researched spell and shows its roll count', () => {
+  it('dims the spell under research and puts its roll count in the icon corner', () => {
     const card = cardFor(state, { kind: 'town', entry: 0, expanded: true, view: 'town' });
-    const fills = card?.ops.filter((op) => op.kind === 'fill') ?? [];
-    const rolls = card?.ops.filter((op) => op.kind === 'text' && op.text === '?2') ?? [];
+    const icon = card?.ops.find((op) => op.kind === 'sprite' && op.src === 'assets/spells/21.png');
+    const dims = card?.ops.filter((op) => op.kind === 'fill' && op.colour === 'rgba(0, 0, 0, 0.55)') ?? [];
+    const rolls = card?.ops.find((op) => op.kind === 'text' && op.text === '2');
 
-    expect(fills).toHaveLength(1);
+    expect(dims).toHaveLength(1);
+    expect(icon?.kind === 'sprite' && rolls?.kind === 'text' && rolls.x > icon.x + icon.width / 2).toBe(true);
+  });
+
+  it('keeps the roll count on a closed research without dimming it', () => {
+    const card = cardFor(state, { kind: 'town', entry: 0, expanded: true, view: 'town' });
+    const rolls = card?.ops.filter((op) => op.kind === 'text' && op.text === '3') ?? [];
+    const dims = card?.ops.filter((op) => op.kind === 'fill' && op.colour === 'rgba(0, 0, 0, 0.55)') ?? [];
+
     expect(rolls).toHaveLength(1);
+    expect(dims).toHaveLength(1);
+  });
+
+  it('draws no roll count when the producer reports none', () => {
+    const first = state.towns[0]!;
+    const unread = { ...state, towns: [{ ...first, research: { ...first.research!, rolls: 0 }, researched: [] }] };
+    const card = cardFor(unread, { kind: 'town', entry: 0, expanded: true, view: 'town' });
+
+    expect(card?.ops.some((op) => op.kind === 'fill' && op.colour === '#d4b24c')).toBe(false);
+    expect(card?.ops.some((op) => op.kind === 'text' && op.text === '0')).toBe(false);
   });
 
   it('shows only the built guild levels', () => {

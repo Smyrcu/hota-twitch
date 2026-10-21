@@ -19,6 +19,7 @@ describe('state decoding', () => {
     expect(result.state.towns).toHaveLength(3);
     expect(result.state.heroes[0]?.primary).toEqual([26, 25, 25, 26]);
     expect(result.state.towns[0]?.research).toEqual({ level: 4, slot: 1, spell: 21, rolls: 2 });
+    expect(result.state.towns[0]?.researched).toEqual([{ level: 3, slot: 0, spell: 17, rolls: 3 }]);
     expect(result.state.towns[1]?.garrisonHero?.name).toBe('Sandro');
   });
 
@@ -41,6 +42,15 @@ describe('state decoding', () => {
 
     heroes[0] = { ...heroes[0], localName: 7 };
     expect(decode(document).ok).toBe(false);
+  });
+
+  it('reads a town without researched, as older readers send it, as having none', () => {
+    const document = valid();
+    const towns = document['towns'] as Record<string, unknown>[];
+    delete towns[0]!['researched'];
+    const result = decode(document);
+
+    expect(result.ok && result.state.towns[0]?.researched).toEqual([]);
   });
 
   it('defaults uiScale to 1 when the producer cannot read it', () => {

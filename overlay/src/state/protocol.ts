@@ -67,6 +67,8 @@ export interface Town {
   /** Per guild level 1..5: spell ids of the built levels only. */
   readonly spells: readonly (readonly number[])[];
   readonly research: Research | null;
+  /** Research the streamer closed this game, still carrying its roll count; empty from older readers. */
+  readonly researched: readonly Research[];
   readonly garrison: readonly ArmyEntry[];
   readonly garrisonHero: Hero | null;
   readonly visitingHero: Hero | null;

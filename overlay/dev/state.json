@@ -507,6 +507,9 @@
         "spell": 21,
         "rolls": 2
       },
+      "researched": [
+        { "level": 3, "slot": 0, "spell": 17, "rolls": 3 }
+      ],
       "garrison": [
         [
           0,
