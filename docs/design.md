@@ -215,7 +215,9 @@ the adventure dialog (`+0x44 → +0x68`); portrait tables through `hps000kn.pcx`
 numbers inline.
 
 Open research for the plugin: where the HD Mod keeps the interface scale (needed for
-`display.uiScale`); until found the field is omitted.
+`display.uiScale`); until found the field is omitted. The lead: `_HD3_.dll` names the variables
+`HD.Rez.X/Y` and `HD.SRez.X/Y`, and the launcher stores `Graphics.Resolution` in
+`_HD3_Data/Settings/*.ini`; the scale is the screen size over the game's.
 
 ### Build
 

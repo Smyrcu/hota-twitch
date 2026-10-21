@@ -1,6 +1,7 @@
 /**
  * The HD Mod interface scale the streamer plays with. The contract allows anything from 1 to 4
- * with two decimals; these are the steps the mod itself offers, which is what the page lists.
+ * with two decimals; these are the steps the page lists. The mod itself names no such setting:
+ * the streamer derives it from the launcher's resolution (see docs/protocol.md, section 4).
  */
 export const UI_SCALES: readonly number[] = [1, 1.25, 1.5, 1.75, 2, 3, 4];
 
