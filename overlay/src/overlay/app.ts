@@ -10,6 +10,7 @@ import { BroadcastReceiver } from '../twitch/receiver.js';
 import { computeZones, containFit, videoRect, type Rect, type Size, type Zone } from '../zones/index.js';
 import { CardView } from './card-view.js';
 import { advance, matches, selectionFor } from './interaction.js';
+import { PresenceNotice } from './presence-notice.js';
 import { cardScale, shrinkToFit } from './scale.js';
 import { ZoneLayer } from './zone-layer.js';
 
@@ -23,12 +24,16 @@ export class OverlayApp {
   private frame = 0;
   private problem = '';
 
-  private readonly sprites = new SpriteCache(() => this.scheduleDraw());
+  private readonly sprites = new SpriteCache(() => {
+    this.notice.invalidate();
+    this.scheduleDraw();
+  });
   private readonly fonts = new FontStore();
   private readonly countLines = (value: string, maxWidth: number): number =>
     this.fonts.lineCounter('small')(value, maxWidth);
   private readonly layer: ZoneLayer;
   private readonly view: CardView;
+  private readonly notice: PresenceNotice;
   private readonly status: HTMLElement | null;
   private teardown: (() => void)[] = [];
 
@@ -41,7 +46,14 @@ export class OverlayApp {
       onLeave: (zone) => this.leave(zone),
       onClick: (zone) => this.click(zone),
     });
-    this.view = new CardView(root, new CardPainter(this.sprites, this.fonts));
+    const painter = new CardPainter(this.sprites, this.fonts);
+    this.view = new CardView(root, painter);
+    this.notice = new PresenceNotice(
+      root,
+      painter,
+      (font, value) => this.fonts.textWidth(font, value),
+      () => this.scheduleDraw(),
+    );
     this.status = params.debug ? this.createStatus() : null;
     if (params.background !== null) {
       root.classList.add('calibration');
@@ -54,6 +66,7 @@ export class OverlayApp {
     this.measure();
     window.addEventListener('resize', () => this.measure());
     window.addEventListener('pagehide', () => this.stop());
+    this.notice.start();
     if (this.params.mock) this.startMock();
     else this.startTwitch();
     this.scheduleDraw();
@@ -61,6 +74,7 @@ export class OverlayApp {
 
   /** Releases the state source when the viewer leaves the player. */
   stop(): void {
+    this.notice.stop();
     for (const release of this.teardown) release();
     this.teardown = [];
   }
@@ -75,7 +89,10 @@ export class OverlayApp {
   private startMock(): void {
     this.teardown.push(
       pollMock(
-        (state) => this.apply(state),
+        (state) => {
+          this.notice.received(state);
+          this.apply(state);
+        },
         (reason) => this.report(reason),
         this.params.state ?? DEFAULT_MOCK_SOURCE,
       ),
@@ -91,6 +108,7 @@ export class OverlayApp {
     const receiver = new BroadcastReceiver(
       (state) => this.apply(state),
       (reason) => this.report(reason),
+      (state) => this.notice.received(state),
     );
     ext.onContext((context) => {
       if (context.hlsLatencyBroadcaster !== undefined) {
@@ -130,6 +148,7 @@ export class OverlayApp {
   }
 
   private enter(zone: Zone): void {
+    this.notice.dismiss();
     if (this.selection === null || !matches(this.selection, zone)) this.selection = selectionFor(zone);
     this.scheduleDraw();
   }
@@ -157,6 +176,7 @@ export class OverlayApp {
   }
 
   private draw(): void {
+    this.notice.draw(this.player);
     const state = this.state;
     if (state === null || this.player.width === 0) {
       this.layer.render([], this.params.debug);

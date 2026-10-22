@@ -62,3 +62,27 @@ export function placeCard(zone: Rect, card: Size, video: Rect, gap = 8): Placeme
 }
 
 const clamp = (value: number, low: number, high: number): number => Math.max(low, Math.min(value, high));
+
+/**
+ * The picture height at which a notice is drawn one to one. Below it the notice keeps its bitmap
+ * size, for the same reason the card does, unless it would not fit the picture; above it the
+ * notice grows with the picture.
+ */
+const NOTICE_REFERENCE_HEIGHT = 720;
+
+export function noticeScale(notice: Size, picture: Size): number {
+  const exact = picture.height / NOTICE_REFERENCE_HEIGHT;
+  const scale = Number.isFinite(exact) && exact > MIN_CARD_SCALE ? exact : MIN_CARD_SCALE;
+  return shrinkToFit(scale, notice, picture);
+}
+
+/**
+ * Places the notice in the bottom-right corner of the picture, away from the panel lists at the
+ * top of the right-hand column and from the cards that open beside them.
+ */
+export function placeNotice(notice: Size, area: Rect, margin: number): Placement {
+  return {
+    left: Math.max(area.x, area.x + area.width - margin - notice.width),
+    top: Math.max(area.y, area.y + area.height - margin - notice.height),
+  };
+}

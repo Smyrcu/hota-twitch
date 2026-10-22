@@ -8,7 +8,9 @@ export type ProblemSink = (reason: string) => void;
 /**
  * Turns broadcast messages into states, applied `hlsLatencyBroadcaster` seconds late so the
  * card matches the video the viewer is watching. A message that does not decode is reported
- * and dropped: the previously applied state stays on screen.
+ * and dropped: the previously applied state stays on screen. `onReceived` hears every state as
+ * soon as it decodes, for what has to know that the streamer is live rather than what the video
+ * shows.
  */
 export class BroadcastReceiver {
   private latencyMs = 0;
@@ -18,6 +20,7 @@ export class BroadcastReceiver {
   constructor(
     private readonly onState: StateSink,
     private readonly onProblem: ProblemSink = () => {},
+    private readonly onReceived: StateSink = () => {},
   ) {}
 
   setLatencySeconds(seconds: number): void {
@@ -35,6 +38,7 @@ export class BroadcastReceiver {
       this.onProblem(result.reason);
       return;
     }
+    this.onReceived(result.state);
     this.schedule(result.state);
   }
 

@@ -3,9 +3,10 @@ import type { TextAlign } from './text/layout.js';
 
 /**
  * The background a card section is drawn on: the game's quick-view popup bitmaps for the hover
- * card, and the dialog box (leather fill plus `dialgbox.def` frame) for the click expansion.
+ * card, the dialog box (leather fill plus `dialgbox.def` frame) for the click expansion, and the
+ * popup's leather and bevel without a bitmap for the overlay's own notice.
  */
-export type PanelKind = 'hero' | 'town' | 'expansion';
+export type PanelKind = 'hero' | 'town' | 'expansion' | 'notice';
 
 export type DrawOp =
   | { readonly kind: 'panel'; readonly panel: PanelKind; readonly x: number; readonly y: number; readonly width: number; readonly height: number }

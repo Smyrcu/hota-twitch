@@ -1,11 +1,14 @@
 import type { PanelKind } from './display.js';
 import type { SpriteCache } from './sprites.js';
 
-/** The quick-view popup bitmaps, once `tools/` exports them. */
-const POPUP_SOURCES: Readonly<Record<PanelKind, string | null>> = {
-  hero: 'assets/ui/popup-hero.png',
-  town: 'assets/ui/popup-town.png',
-  expansion: null,
+/** A quick-view popup bitmap, the dialog box, or the popup's leather and bevel alone. */
+type Background = { readonly popup: string } | 'dialog' | 'bevel';
+
+const BACKGROUNDS: Readonly<Record<PanelKind, Background>> = {
+  hero: { popup: 'assets/ui/popup-hero.png' },
+  town: { popup: 'assets/ui/popup-town.png' },
+  expansion: 'dialog',
+  notice: 'bevel',
 };
 
 const LEATHER = 'assets/ui/leather.png';
@@ -48,27 +51,29 @@ function tile(
 }
 
 /**
- * Draws the background of a card section. The hover card uses the game's own popup bitmap when
- * it is available; until then, and always for the click expansion, it uses the game's dialog
- * box: the `DIBOX128` leather fill inside the `dialgbox.def` frame.
+ * Draws the background of a card section. The hover card uses the game's own popup bitmap, with
+ * the popup's leather and bevel in its place until it loads; the click expansion uses the game's
+ * dialog box, the `DIBOX128` leather fill inside the `dialgbox.def` frame; the notice uses the
+ * leather and bevel alone.
  */
 export class PanelPainter {
   constructor(private readonly sprites: SpriteCache) {}
 
   draw(context: CanvasRenderingContext2D, kind: PanelKind, x: number, y: number, width: number, height: number): void {
-    const popup = POPUP_SOURCES[kind];
-    if (popup === null) {
+    const background = BACKGROUNDS[kind];
+    if (background === 'dialog') {
       this.drawDialog(context, x, y, width, height);
       return;
     }
-    const bitmap = this.sprites.get(popup);
+    const bitmap = background === 'bevel' ? null : this.sprites.get(background.popup);
     if (bitmap !== null) context.drawImage(bitmap, x, y, width, height);
     else this.drawPopup(context, x, y, width, height);
   }
 
   /**
-     * Stand-in for a quick-view popup bitmap: the same leather inside the thin bevel the game
-     * draws around a popup, so the field positions of the card still hold.
+     * The leather inside the thin bevel the game draws around a popup. It stands in for a popup
+     * bitmap that has not loaded, so the field positions of the card still hold, and it is the
+     * whole background of a notice, which has no bitmap of its own.
      */
   private drawPopup(context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void {
     this.fillLeather(context, x, y, width, height);

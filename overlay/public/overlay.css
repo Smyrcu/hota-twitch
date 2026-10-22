@@ -36,8 +36,34 @@ body {
  */
 .card {
   position: absolute;
+  z-index: 1;
   pointer-events: none;
   image-rendering: auto;
+}
+
+/* Below the card, so a card opened while the notice is still up is never covered. */
+.notice {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  image-rendering: auto;
+  animation: notice-in 0.4s ease-out;
+  transition: opacity 0.8s ease-in;
+}
+
+.notice.inactive {
+  filter: grayscale(1);
+}
+
+.notice.gone {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes notice-in {
+  from {
+    opacity: 0;
+  }
 }
 
 .status {
