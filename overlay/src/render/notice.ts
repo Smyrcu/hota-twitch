@@ -1,4 +1,4 @@
-import type { FontId, TextColour } from '../data/fonts.js';
+import type { FontId } from '../data/fonts.js';
 import type { Presence } from '../state/presence.js';
 import { sprite, text, type Card } from './display.js';
 
@@ -7,13 +7,11 @@ export type TextWidth = (font: FontId, value: string) => number;
 interface NoticeText {
   readonly title: string;
   readonly hint: string;
-  readonly hintColour: TextColour;
 }
 
 const TEXTS: Readonly<Record<Presence, NoticeText>> = {
-  active: { title: 'HotA overlay is active', hint: 'Hover a hero or a town in the panel', hintColour: 'white' },
-  paused: { title: 'HotA overlay is active', hint: 'Cards open on the adventure map', hintColour: 'white' },
-  inactive: { title: 'HotA overlay is not active', hint: 'No game is being shared', hintColour: 'grey' },
+  active: { title: 'HotA overlay is active', hint: 'Hover a hero or a town in the panel' },
+  paused: { title: 'HotA overlay is active', hint: 'Cards open on the adventure map' },
 };
 
 /** The Visions spell: the game's own picture for seeing what an army holds. */
@@ -27,7 +25,7 @@ const HINT_HEIGHT = 16;
 
 /**
  * The notice a viewer sees on arrival: the Visions icon and two lines in the game's fonts on the
- * leather of a popup. The inactive one carries the same layout; the page draws it desaturated.
+ * leather of a popup.
  */
 export function noticeCard(presence: Presence, widthOf: TextWidth): Card {
   const copy = TEXTS[presence];
@@ -44,7 +42,7 @@ export function noticeCard(presence: Presence, widthOf: TextWidth): Card {
       { kind: 'panel', panel: 'notice', x: 0, y: 0, width, height },
       sprite(ICON.src, PADDING_X, Math.round((height - ICON.height) / 2), ICON.width, ICON.height),
       text(copy.title, 'medium', 'yellow', textX, textY),
-      text(copy.hint, 'small', copy.hintColour, textX, textY + TITLE_HEIGHT),
+      text(copy.hint, 'small', 'white', textX, textY + TITLE_HEIGHT),
     ],
   };
 }
