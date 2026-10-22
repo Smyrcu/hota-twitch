@@ -66,7 +66,6 @@ export class OverlayApp {
     this.measure();
     window.addEventListener('resize', () => this.measure());
     window.addEventListener('pagehide', () => this.stop());
-    this.notice.start();
     if (this.params.mock) this.startMock();
     else this.startTwitch();
     this.scheduleDraw();

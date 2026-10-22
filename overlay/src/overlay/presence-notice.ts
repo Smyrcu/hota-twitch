@@ -14,8 +14,8 @@ const MARGIN = 12;
 const ASSUMED_PICTURE: Size = { width: 1920, height: 1080 };
 
 /**
- * The notice that tells a viewer on arrival whether the overlay is live on this stream. It fades in
- * once the verdict is known and fades out on its own, or as soon as the viewer reaches the panel.
+ * The notice that tells a viewer the overlay is live on this stream. It fades in when the streamer's
+ * game is first heard and fades out on its own, or as soon as the viewer reaches the panel.
  */
 export class PresenceNotice {
   private presence: Presence | null = null;
@@ -35,10 +35,6 @@ export class PresenceNotice {
       if (this.presence === null) this.view.hide();
     });
     this.watch = new PresenceWatch({ show: (presence) => this.show(presence), hide: () => this.fade() });
-  }
-
-  start(): void {
-    this.watch.start();
   }
 
   received(state: GameState): void {
@@ -85,7 +81,6 @@ export class PresenceNotice {
     this.presence = presence;
     this.painted = '';
     this.view.toggleClass('gone', false);
-    this.view.toggleClass('inactive', presence === 'inactive');
     this.redraw();
   }
 

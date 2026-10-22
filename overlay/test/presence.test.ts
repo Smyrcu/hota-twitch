@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NOTICE_VISIBLE_MS, PRESENCE_WAIT_MS, PresenceWatch } from '../src/overlay/presence.js';
+import { NOTICE_VISIBLE_MS, PresenceWatch } from '../src/overlay/presence.js';
 import { noticeScale, placeNotice } from '../src/overlay/scale.js';
 import { noticeCard } from '../src/render/notice.js';
 import { presenceOf, type Presence } from '../src/state/presence.js';
@@ -28,70 +28,30 @@ describe('presence watch', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('calls the overlay active as soon as a loaded game is heard', () => {
+  it('waits for a loaded game however long it takes, and shows nothing while there is none', () => {
     const { watch: presence, shown } = watch();
-    presence.start();
-
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS - 1);
-    presence.received(MOCK_STATE);
-
-    expect(shown).toEqual(['active']);
-  });
-
-  it('calls the overlay inactive when nothing is heard by the deadline', () => {
-    const { watch: presence, shown } = watch();
-    presence.start();
-
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS - 1);
-    expect(shown).toEqual([]);
-
-    vi.advanceTimersByTime(1);
-    expect(shown).toEqual(['inactive']);
-  });
-
-  it('does not take a reader with no game loaded for a live overlay', () => {
-    const { watch: presence, shown } = watch();
-    presence.start();
 
     presence.received(NO_GAME);
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS);
+    vi.advanceTimersByTime(60_000);
+    expect(shown).toEqual([]);
 
-    expect(shown).toEqual(['inactive']);
+    presence.received(IN_COMBAT);
+    expect(shown).toEqual(['paused']);
   });
 
-  it('corrects a verdict a later state outranks while the notice is up, and restarts its clock', () => {
-    const { watch: presence, shown, hidden } = watch();
-    presence.start();
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS);
-
-    vi.advanceTimersByTime(NOTICE_VISIBLE_MS - 1);
-    presence.received(IN_COMBAT);
-    presence.received(MOCK_STATE);
-    presence.received(IN_COMBAT);
-
-    expect(shown).toEqual(['inactive', 'paused', 'active']);
-    vi.advanceTimersByTime(NOTICE_VISIBLE_MS - 1);
-    expect(hidden()).toBe(0);
-    vi.advanceTimersByTime(1);
-    expect(hidden()).toBe(1);
-  });
-
-  it('shows nothing more once the notice has gone, however many states follow', () => {
+  it('shows the notice once, on the first state from a loaded game', () => {
     const { watch: presence, shown } = watch();
-    presence.start();
-    presence.received(IN_COMBAT);
-    vi.advanceTimersByTime(NOTICE_VISIBLE_MS);
 
+    presence.received(IN_COMBAT);
     presence.received(MOCK_STATE);
-    presence.start();
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS);
+    vi.advanceTimersByTime(NOTICE_VISIBLE_MS);
+    presence.received(MOCK_STATE);
 
     expect(shown).toEqual(['paused']);
   });
 
   it('hides the notice on its own after it has been visible for a while', () => {
     const { watch: presence, hidden } = watch();
-    presence.start();
     presence.received(MOCK_STATE);
 
     vi.advanceTimersByTime(NOTICE_VISIBLE_MS - 1);
@@ -101,49 +61,39 @@ describe('presence watch', () => {
     expect(hidden()).toBe(1);
   });
 
-  it('hides the notice early when dismissed, and only once', () => {
-    const { watch: presence, hidden } = watch();
-    presence.start();
+  it('hides the notice early when dismissed, once, and ignores a dismissal before it is shown', () => {
+    const { watch: presence, shown, hidden } = watch();
+    presence.dismiss();
     presence.received(MOCK_STATE);
 
     presence.dismiss();
     presence.dismiss();
     vi.advanceTimersByTime(NOTICE_VISIBLE_MS);
 
+    expect(shown).toEqual(['active']);
     expect(hidden()).toBe(1);
   });
 
-  it('ignores a dismissal before there is anything to dismiss', () => {
-    const { watch: presence, shown } = watch();
-    presence.start();
+  it('hides a notice that is up when stopped, and shows nothing after', () => {
+    const { watch: presence, shown, hidden } = watch();
+    presence.received(MOCK_STATE);
 
-    presence.dismiss();
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS);
+    presence.stop();
+    vi.advanceTimersByTime(NOTICE_VISIBLE_MS);
+    presence.received(MOCK_STATE);
 
-    expect(shown).toEqual(['inactive']);
+    expect(shown).toEqual(['active']);
+    expect(hidden()).toBe(1);
   });
 
-  it('shows nothing once stopped', () => {
+  it('shows nothing once stopped before a game was heard', () => {
     const { watch: presence, shown, hidden } = watch();
-    presence.start();
     presence.stop();
 
-    vi.advanceTimersByTime(PRESENCE_WAIT_MS);
     presence.received(MOCK_STATE);
 
     expect(shown).toEqual([]);
     expect(hidden()).toBe(0);
-  });
-
-  it('hides a notice that is up when stopped', () => {
-    const { watch: presence, hidden } = watch();
-    presence.start();
-    presence.received(MOCK_STATE);
-
-    presence.stop();
-    vi.advanceTimersByTime(NOTICE_VISIBLE_MS);
-
-    expect(hidden()).toBe(1);
   });
 });
 
@@ -158,13 +108,12 @@ describe('presence notice', () => {
     expect(card.width).toBe(10 + 48 + 8 + 'Hover a hero or a town in the panel'.length * 7 + 10);
   });
 
-  it('tells the viewer what to do when live and why not otherwise', () => {
+  it('tells the viewer where the cards open', () => {
     const lines = (presence: Presence): string[] =>
       noticeCard(presence, widthOf).ops.flatMap((op) => (op.kind === 'text' ? [op.text] : []));
 
     expect(lines('active')).toEqual(['HotA overlay is active', 'Hover a hero or a town in the panel']);
     expect(lines('paused')).toEqual(['HotA overlay is active', 'Cards open on the adventure map']);
-    expect(lines('inactive')).toEqual(['HotA overlay is not active', 'No game is being shared']);
   });
 
   it('keeps its bitmap size in a small picture and grows with a large one', () => {

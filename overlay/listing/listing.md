@@ -108,9 +108,8 @@ Interference and Runes, and draws hero and town names in Cyrillic when the game 
 The mage guild shows the number of rolls of a researched spell in the corner of its icon, and
 keeps it once the research is accepted. A viewer who opens the stream sees a small notice in the
 bottom-right corner of the picture for a few seconds: "HotA overlay is active" once the streamer's
-game is heard, or a grey "HotA overlay is not active" when no game arrives; it fades on its own and
-is not shown again on that page. Nothing else changes: the same capabilities, the same backend, no
-new network calls.
+game is first heard; it fades on its own and is not shown again on that page. Nothing else
+changes: the same capabilities, the same backend, no new network calls.
 
 How the extension gets its data. The overlay draws nothing by itself. An application the
 streamer runs next to Heroes of Might and Magic III: Horn of the Abyss reads the state of the
@@ -121,11 +120,9 @@ viewer identity, sends no chat message and calls no other service. It takes the 
 inside the hover targets over the two panel lists; everywhere else on the video the player is
 untouched.
 
-What you see without a streamer, or while the streamer has no game loaded. A grey notice "HotA
-overlay is not active" in the bottom-right corner for a few seconds after the page opens, then
-nothing. With no state there are no hover targets and no card, and the video is untouched. The
-configuration page works on its own: it generates the streamer's token, shows it once, and reports
-whether state is arriving.
+What you see without a streamer. Nothing. With no state there are no hover targets and no
+card, and the video is untouched. The configuration page works on its own: it generates the
+streamer's token, shows it once, and reports whether state is arriving.
 
 How to see it working. On the channel https://www.twitch.tv/smyrcu while the streamer is live.
 The extension needs a running game, so the channel is live for review at <publisher gives the
