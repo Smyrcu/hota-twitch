@@ -73,6 +73,12 @@ export class FontStore {
     return painted;
   }
 
+  /** The width of one unwrapped line; zero while the font is missing, which draws nothing either. */
+  textWidth(font: FontId, value: string): number {
+    const atlas = this.atlas(font);
+    return atlas === null ? 0 : layoutText(atlas, value).width;
+  }
+
   /** Counts wrapped lines in the font the card expansions use. */
   lineCounter(font: FontId): LineCounter {
     return (value, maxWidth) => {

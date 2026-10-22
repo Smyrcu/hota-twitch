@@ -77,6 +77,18 @@ Zones exist only while `screen == "adventure"`. `heroListTop` / `townListTop` sh
 entry a row shows. Clicking a zone never reaches the player (the overlay owns the pointer
 only inside zones).
 
+### Presence notice
+
+A viewer arriving on the stream is told for a few seconds, in the bottom-right corner of the
+picture, whether the overlay is live: "active" as soon as a state from a loaded game decodes (with
+a hint to hover the panel on the adventure map, or that cards open there on any other screen), "not
+active" when none has arrived 15 s after the page opened (PubSub does not replay, and the producer
+posts at least every 10 s). A state that arrives while the notice is still up upgrades the verdict.
+The verdict rests on a message arriving, not on its `ts`, which is the producer's clock. It is drawn
+like a card (the popup's leather and bevel, the Visions icon, the game's fonts), greyed when
+inactive, shown once per page load and dismissed early when the pointer reaches the panel. Before a
+state says how the game sits in the player, the picture is taken to be 16:9.
+
 ### Fonts
 
 `tools/` exports each game font (`.fnt`: 256 glyphs, 8-bit alpha) as an atlas

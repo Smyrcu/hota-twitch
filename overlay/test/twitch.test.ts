@@ -59,6 +59,23 @@ describe('broadcast receiver', () => {
     expect(states).toHaveLength(1);
   });
 
+  it('reports a state as received before the latency has passed', async () => {
+    const received: GameState[] = [];
+    const states: GameState[] = [];
+    const receiver = new BroadcastReceiver(
+      (state) => states.push(state),
+      () => {},
+      (state) => received.push(state),
+    );
+    receiver.setLatencySeconds(4);
+
+    await receiver.handle(encoded);
+    await receiver.handle('nonsense');
+
+    expect(received).toHaveLength(1);
+    expect(states).toHaveLength(0);
+  });
+
   it('keeps the previous state when a message is malformed', async () => {
     const states: GameState[] = [];
     const problems: string[] = [];
