@@ -110,8 +110,53 @@ read from:
 
 | Offset | Type | Meaning |
 |---|---|---|
-| `+0x10` | INT32[5][6] | slot states: 0 the tier has no such slot, 1 an ordinary spell, 2 a spell being researched |
-| `+0xA4` | INT32 | rolls made on the slot currently under research; -1 once the research is closed |
+| `+0x0C` | UINT32[3]* | the spells the guild has held or been offered, one bit per spell id |
+| `+0x10` | INT32[5][6] | slot states: 1 an ordinary spell, 2 a spell being researched, 0 research kept - or a slot the tier does not have |
+| `+0xA0` | INT32 | the spell the slot under research held before it; -1 when nothing is open |
+| `+0xA4` | INT32 | tier 4 rolls toward a forced Town Portal; -1 once Town Portal has turned up |
+| `+0xA8` | INT32 | the same on tier 5 for Dimension Door |
+
+**HotA keeps no roll count per slot.** Read out of HotA.dll on 2026-10-24 and checked against
+memory snapshots taken across a tier 5 roll, in which nothing went from 3 to 4: a roll writes the
+pick into `town.spells[tier][slot]`, moves the slot from state 1 to 2 the first time, stores the
+spell it replaced at `+0xA0`, and that is all it writes about the slot. The September reading of
+`+0xA4` as that count held only because the town it was checked in had rolled twice on tier 4.
+
+**`+0xA4` and `+0xA8` serve one rule.** Every roll on tier 4 adds one to `+0xA4`, and on tier 5 to
+`+0xA8`, while the word is not negative. A roll that starts with the word at 2 or more brings Town
+Portal (tier 4) or Dimension Door (tier 5), provided the offered set does not have that spell
+yet, and sets the word to -1; the word also drops to -1 the moment the spell turns up in the
+guild by any other way. Tiers 1 to 3 count nothing. In the live game the towns whose guild has no
+fourth or fifth level read -1 in the matching word from the start.
+
+**The rolls are counted from the offered set.** HotA marks the spells of every slot when it
+builds the record - the Tower's Library slot when the Library is built - and every spell its
+research draws, and a draw never returns a spell already marked. A roll draws two spells on
+tiers 1 to 4, of which the streamer keeps one, and one on tier 5; it draws fewer only when the
+tier has run out of spells. So a tier's rolls all told are
+
+    ceil((spells of that level in the set - the tier's slots) / (2 on tiers 1 to 4, 1 on tier 5))
+
+with the slot count the town's own per-tier count at `town + 0xBC`, Library included. The spell
+levels come from the game's spell table, `*(0x687FA8)`, entries `0x88` bytes apart with the level
+at `+0x18` - a pointer, because NH3API's `akSpellTraits` names the copy SoD keeps at `0x6854A0`,
+which HotA leaves behind. Checked in the live game: tier 5 held Magic Mirror, rolled into Fly,
+Dimension Door, Summon Air and Summon Earth Elemental, and its five bits less one slot made four
+rolls; tier 4 had four bits over two slots, one roll, the same as `+0xA4`; tiers 1 to 3 had as
+many bits as slots.
+
+**Research kept is a real slot at state 0** - an index below the tier's slot count. HotA writes 0
+when the streamer closes the research, and the slot can never be researched again. It also
+clears the states of a tier with no spell left to draw, where a slot at 0 says nothing. The
+producers recognise that only in its plain form, a tier offered every spell of its level; a tier
+can run out sooner, with spells the map bans or the town type never gets, and that is missed.
+
+**One research is open at a time per town**, and a kept slot cannot be researched again, so a
+tier's rolls belong to its researched slots together. With one of them the count is exact. With
+several, the game does not tell them apart: a producer that watched the earlier ones close keeps
+the counts it worked out then, and otherwise takes each earlier slot to have rolled once and the
+latest - the open one - all the rest. The plugin keeps no history and always does the latter; the
+standalone reader does the former and also reports the kept slots under `researched`.
 
 The slot number in the record is the game's own, and `docs/protocol.md` wants the index into
 the list the plugin actually sends for that tier - which holds only the tier's real, filled
@@ -119,19 +164,13 @@ slots. The two are not the same number whenever a slot before it is empty, so th
 translates one into the other and reports no research at all when the researched slot is not in
 that list (an unbuilt tier, or an empty slot).
 
-Found by the spike on 2026-09-09 by diffing memory across a research roll, and confirmed with
-the owner: rolling Town Portal into a slot and accepting it moved the counter as expected, and
-closing the research set both `+0xA0` and `+0xA4` back to -1. That is why `rolls` is only
-meaningful while research is open, which matches what `docs/protocol.md` says about `research`
-being null the rest of the time. Closing it also sets the slot's state to 0, the same value as a
-slot the tier does not have, so nothing in the record says the slot was ever researched: the
-producer keeps the count it last read for the slot and reports it under `researched` while the
-slot still holds the same spell.
-
-Because SoD uses this field for something else, the value is not trusted blindly. It has to be
+Because SoD uses this field for something else, the record is not trusted blindly. It has to be
 four-byte aligned, `VirtualQuery` has to agree that all `0xD0` bytes are committed and readable,
-and every slot state has to be in `0..15`; a single value outside that range means the record is
-not a HotA extension record and the town simply reports no research.
+and every slot state has to be in `0..15`; anything else means the record is not a HotA extension
+record and the town simply reports no research. The offered set has to be readable, with no bit
+set past the last spell, and hold a bit for every spell the guild holds - every way into a slot
+that the reading of HotA.dll found marks one. When it does not, the plugin still reports the
+research, with `rolls` 0.
 
 ### Effective primary skills - `H3Hero::GetHeroPrimary`, `THISCALL 0x5BE240`
 

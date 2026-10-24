@@ -73,7 +73,8 @@ consumer assumes 1 if it is still absent.
   "guild": 5,                     // mage guild level 0..5
   "spells": [[15, 27], [], [], [38, 9], [36]],   // exactly five arrays, guild levels 1..5; an unbuilt level is []; only real slots (Library included)
   "research": { "level": 4, "slot": 1, "spell": 55, "rolls": 2 },  // null when no research is open
-  "researched": [{ "level": 3, "slot": 0, "spell": 17, "rolls": 3 }], // research closed this game; may be absent
+  "researched": [{ "level": 3, "slot": 0, "spell": 17, "rolls": 3 }], // research closed and kept; may be absent
+  "forced": [{ "level": 4, "spell": 9, "rollsBefore": 0 }],          // Town Portal / Dimension Door rule; absent when it binds no level
   "garrison": [[0, 13, 1]],       // army in the town's own garrison slots (see note)
   "garrisonHero": { /* Hero */ }, // null when empty
   "visitingHero": { /* Hero */ }  // null when empty
@@ -83,16 +84,26 @@ consumer assumes 1 if it is still absent.
 Note on `garrison`: when a hero stands in the garrison the game keeps the army on the hero and
 the town's own slots are empty; the consumer shows `garrisonHero.army` in that case.
 
-`research` describes HotA spell research that is open in the mage guild: the spell already
-sits in `spells[level-1][slot]`, but heroes cannot learn it until the streamer closes the
-research. `rolls` is the number of rolls made on that slot so far; a producer that cannot read
-the count sends 0, and the consumer then shows no count rather than a zero.
+`research` describes HotA spell research that is open in the mage guild: the spell already sits
+in `spells[level-1][slot]`, but heroes cannot learn it until the streamer closes the research.
+`rolls` is the number of rolls the slot is counted to have taken; a producer that cannot count
+them sends 0, and the consumer then shows no count rather than a zero. The game keeps no count
+per slot, only the spells each level has been offered, so the count is a level's rolls all told:
+exact while one slot of the level has been researched. With several, a producer that did not
+watch the earlier ones takes each of them to have rolled once and the open one all the rest (see
+`docs/hota-memory-layout.md`).
 
-`researched` lists the research the streamer has already closed in this town, each entry in the
-same shape as `research`, with the rolls the slot took before it was closed. The game forgets
-the count when the research closes, so the producer remembers it for as long as it watches the
-same game; an entry whose slot no longer holds that spell is dropped. Producers released before
-the field existed leave it out, and the consumer reads a missing `researched` as `[]`.
+`researched` lists the research the streamer has closed and kept in this town, each entry in the
+same shape as `research`, with the rolls the slot took, counted the same way. Producers released
+before the field existed leave it out, and the consumer reads a missing `researched` as `[]`.
+
+`forced` follows HotA's rule for Town Portal on level 4 and Dimension Door on level 5: once the
+research of the level has rolled twice, the next roll brings that spell, provided the town has
+not been offered it yet. `rollsBefore` is the number of ordinary rolls left before that one; 0
+means the next roll brings it. A level the rule does not bind - the spell has turned up, the town
+cannot have it, or the guild has not reached the level - is not listed, and the field is left
+out when no level is.
+Producers released before the field existed leave it out too.
 
 ## 2. Producer → backend
 

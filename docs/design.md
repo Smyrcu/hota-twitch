@@ -217,14 +217,14 @@ in this repository patches game files or impersonates other plugins.
 ### Memory layout
 
 HotA 1.8 keeps the SoD 3.2 executable but relocates several structures; NH3API types cover the
-stable part. The spike established (see `docs/research/spike-reader.cs`): hero table found by
-scan and pointer-reference ranking; spell table found
-through the "Magic Arrow" string; `H3Town + 0xD4` points to a HotA record with mage-guild slot
-states and the research roll counter; backpack count at `+0x3D4`; town-list scroll offset in
-the adventure dialog (`+0x44 → +0x68`); portrait tables through `hps000kn.pcx` /
-`hpl000kn.pcx`; game resolution at `0x69FE68/0x69FE6C`. The plugin documents what it uses in
-`docs/hota-memory-layout.md` (English) and reads through named constants, never magic
-numbers inline.
+stable part. The spike established (see `docs/research/spike-reader.cs`): hero table found by scan
+and pointer-reference ranking; spell table found through the "Magic Arrow" string; `H3Town + 0xD4`
+points to a HotA record with mage-guild slot states (the offered-spell set the research rolls are
+counted from was found later, in HotA.dll); backpack count at `+0x3D4`; town-list scroll offset in
+the adventure dialog (`+0x44 → +0x68`); portrait tables through `hps000kn.pcx` / `hpl000kn.pcx`;
+game resolution at `0x69FE68/0x69FE6C`. The plugin documents what it uses in
+`docs/hota-memory-layout.md` (English) and reads through named constants, never magic numbers
+inline.
 
 Open research for the plugin: where the HD Mod keeps the interface scale (needed for
 `display.uiScale`); until found the field is omitted. The lead: `_HD3_.dll` names the variables
