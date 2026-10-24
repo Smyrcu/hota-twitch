@@ -283,6 +283,7 @@ static class Layout
     public const int HotaTownSlotStateResearch = 2;
     public const int HotaTownSlotStateMax = 15;      // większe wartości = to nie jest rekord HotA
     public const uint HotaTownResearchCount = 0xA4;  // INT32 liczba losowań bieżącego badania (-1, gdy miasto nie ma kręgu 4); zgadza się dla 2 losowań
+                                                     // Później (HotA.dll, 2026-10-24): to licznik kręgu 4 do wymuszenia Town Portal, nie losowań slotu - zob. docs/hota-memory-layout.md
 
     // H3Player — miasta w panelu
     public const uint PlayerTownsCount = 0x3E;       // INT8

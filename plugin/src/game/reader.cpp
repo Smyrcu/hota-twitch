@@ -14,6 +14,10 @@
 
 namespace hota_twitch::game
 {
+
+static_assert(kSpellCount == MAX_BOOK_SPELLS, "the offered set covers the spell-book spells");
+static_assert(sizeof(OfferedSpells) == sizeof(exe_bitset<MAX_BOOK_SPELLS>),
+              "the offered set is laid out as the game's own spell bitset");
 namespace
 {
 
@@ -402,20 +406,104 @@ void Reader::readResearch(const town& source, TownSnapshot& out) const
     {
         tierSpells[index] = source.townSpells[static_cast<std::size_t>(slot.tier)][index];
     }
-    const int reported = reportedSpellIndex(
-        tierSpells, source.maxTownSpellAvailable[static_cast<std::size_t>(slot.tier)], slot.slot);
+    const int slotCount = source.maxTownSpellAvailable[static_cast<std::size_t>(slot.tier)];
+    const int reported = reportedSpellIndex(tierSpells, slotCount, slot.slot);
     if (reported < 0)
     {
         return;
     }
-
-    const std::int32_t rolls = readAt<std::int32_t>(record, layout::kHotaExtensionRollCount);
     Research research;
     research.level = slot.tier + 1;
     research.slot = reported;
     research.spell = tierSpells[static_cast<std::size_t>(slot.slot)];
-    research.rolls = rolls > 0 ? rolls : 0;
+    OfferedSpells offered{};
+    if (readOfferedSpells(record, offered) && holdsOnlyOfferedSpells(source, offered))
+    {
+        research.rolls =
+            researchRolls(slot, states, tierSpells, guildSlotCount(slotCount), offered);
+    }
     out.research = research;
+}
+
+/// The set of spells the guild has held or been offered. False when the pointer leads nowhere
+/// readable or a bit is set past the last spell, which no HotA set shows.
+bool Reader::readOfferedSpells(const void* record, OfferedSpells& out) const
+{
+    const void* const set = readAt<const void*>(record, layout::kHotaExtensionOfferedSpells);
+    if ((reinterpret_cast<std::uintptr_t>(set) % 4) != 0 ||
+        !isReadable(set, sizeof(OfferedSpells)))
+    {
+        return false;
+    }
+    out = readAt<OfferedSpells>(set, 0);
+    return isSpellSet(out);
+}
+
+/// Whether the set has every spell the guild holds. HotA marks each spell it puts into a slot
+/// that the reading of HotA.dll found; a guild spell missing from the set means a way in that
+/// reading did not find, and the count is not to be trusted then.
+bool Reader::holdsOnlyOfferedSpells(const town& source, const OfferedSpells& offered) const
+{
+    for (int tier = 0; tier < kGuildTiers && tier < source.mageLevel; ++tier)
+    {
+        const int slots =
+            guildSlotCount(source.maxTownSpellAvailable[static_cast<std::size_t>(tier)]);
+        for (int slot = 0; slot < slots; ++slot)
+        {
+            const std::int32_t spell =
+                source.townSpells[static_cast<std::size_t>(tier)][static_cast<std::size_t>(slot)];
+            if (spell >= 0 && !isOffered(offered, spell))
+            {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/// The rolls the open research took, out of the spells its tier has been offered. 0, which the
+/// consumer shows as no count, when the spell table cannot be read.
+int Reader::researchRolls(const GuildSlot& open, const GuildSlotStates& states,
+                          const GuildTierSpells& tierSpells, int slots,
+                          const OfferedSpells& offered) const
+{
+    const void* const table = readAbsolute<const void*>(layout::kSpellTablePointer);
+    if ((reinterpret_cast<std::uintptr_t>(table) % 4) != 0 ||
+        !isReadable(table, layout::kSpellSize * kSpellCount))
+    {
+        return 0;
+    }
+    int onTier = 0;
+    int offeredOnTier = 0;
+    for (int spell = 0; spell < kSpellCount; ++spell)
+    {
+        const auto level = readAt<std::int32_t>(
+            table, (static_cast<std::size_t>(spell) * layout::kSpellSize) + layout::kSpellLevel);
+        if (level == open.tier + 1)
+        {
+            ++onTier;
+            offeredOnTier += isOffered(offered, spell) ? 1 : 0;
+        }
+    }
+
+    // HotA clears the states of a tier with no spell left to draw, where a slot at 0 says
+    // nothing. Every spell of the level offered is the plain case of that; a tier can also run
+    // out sooner, with spells the map bans or the town type never gets, which this misses.
+    int kept = 0;
+    if (offeredOnTier < onTier)
+    {
+        for (int slot = 0; slot < slots; ++slot)
+        {
+            const std::int32_t state =
+                states[static_cast<std::size_t>(open.tier * kGuildSlotsPerTier + slot)];
+            if (slot != open.slot && tierSpells[static_cast<std::size_t>(slot)] >= 0 &&
+                isKeptResearch(state))
+            {
+                ++kept;
+            }
+        }
+    }
+    return openResearchRolls(tierRolls(open.tier, offeredOnTier, slots), kept);
 }
 
 } // namespace hota_twitch::game
