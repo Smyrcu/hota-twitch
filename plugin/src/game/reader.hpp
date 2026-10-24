@@ -2,6 +2,7 @@
 
 #include "core/logging.hpp"
 #include "core/snapshot.hpp"
+#include "core/town_rules.hpp"
 #include "game/hd_mod.hpp"
 
 class hero;
@@ -53,6 +54,11 @@ private:
     void readTown(const town& source, TownSnapshot& out);
     void readGuild(const town& source, TownSnapshot& out) const;
     void readResearch(const town& source, TownSnapshot& out) const;
+    bool readOfferedSpells(const void* record, OfferedSpells& out) const;
+    bool holdsOnlyOfferedSpells(const town& source, const OfferedSpells& offered) const;
+    int researchRolls(const GuildSlot& open, const GuildSlotStates& states,
+                      const GuildTierSpells& tierSpells, int slots,
+                      const OfferedSpells& offered) const;
 
     Logger& m_log;
     HdMod& m_hdMod;

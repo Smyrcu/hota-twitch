@@ -18,9 +18,9 @@ inline bool looksLikePointer(const void* value)
 }
 
 /// Whether `size` bytes from `address` are committed and readable. A stray read inside the
-/// game is an access violation, not something a catch block can undo, so the one pointer the
-/// plugin invents rather than receives - the HotA town extension record - is checked here
-/// before it is followed.
+/// game is an access violation, not something a catch block can undo, so every pointer the
+/// plugin finds by offset rather than receives - the HotA town extension record, the offered
+/// spells hanging off it, HotA's spell table - is checked here before it is followed.
 bool isReadable(const void* address, std::size_t size);
 
 /// Reads a trivially copyable value `offset` bytes into the object at `base`. The caller has

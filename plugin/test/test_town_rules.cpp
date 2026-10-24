@@ -173,3 +173,46 @@ HOTA_TEST(the_library_slot_counts_as_a_real_slot)
 
     HOTA_CHECK_EQ(reportedSpellIndex(tier, 6, 5), 5);
 }
+
+HOTA_TEST(a_tier_counts_its_rolls_from_the_spells_drawn_beyond_its_own)
+{
+    // The game as it stood on 2026-10-24: tier 5 offered five spells to one slot, tier 4 four
+    // to two slots - one roll drawing two - and tier 1 nothing beyond its own.
+    HOTA_CHECK_EQ(tierRolls(4, 5, 1), 4);
+    HOTA_CHECK_EQ(tierRolls(3, 4, 2), 1);
+    HOTA_CHECK_EQ(tierRolls(0, 5, 5), 0);
+    // A last roll that drew one spell, the tier having run out.
+    HOTA_CHECK_EQ(tierRolls(3, 5, 2), 2);
+}
+
+HOTA_TEST(research_kept_earlier_on_the_tier_takes_one_roll_each_and_the_open_one_the_rest)
+{
+    HOTA_CHECK_EQ(openResearchRolls(4, 0), 4);
+    HOTA_CHECK_EQ(openResearchRolls(5, 2), 3);
+    HOTA_CHECK_EQ(openResearchRolls(0, 0), 1);
+}
+
+HOTA_TEST(an_offered_set_with_a_bit_past_the_last_spell_is_not_hotas)
+{
+    OfferedSpells offered{};
+    offered[2] = std::uint32_t{1} << 3;   // spell 67
+    HOTA_CHECK(isSpellSet(offered));
+    HOTA_CHECK(isOffered(offered, 67));
+
+    offered[2] |= std::uint32_t{1} << 6;  // bit 70
+    HOTA_CHECK(!isSpellSet(offered));
+}
+
+HOTA_TEST(offered_spells_are_read_across_the_word_boundaries)
+{
+    OfferedSpells offered{};
+    offered[0] = std::uint32_t{1} << 31;  // spell 31
+    offered[1] = 1;                       // spell 32
+    offered[2] = 1;                       // spell 64
+
+    HOTA_CHECK(isOffered(offered, 31));
+    HOTA_CHECK(isOffered(offered, 32));
+    HOTA_CHECK(!isOffered(offered, 63));
+    HOTA_CHECK(isOffered(offered, 64));
+    HOTA_CHECK(!isOffered(offered, -1));
+}

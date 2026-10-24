@@ -34,19 +34,33 @@ inline constexpr std::size_t kAdvWindowTopTown = 0x68;
 inline constexpr std::int32_t kMaxListTop = 48;
 
 /// HotA hangs a per-town extension record off `town + 0xD4`, bytes SoD uses for
-/// `SpellDisabledMask`. The record is 0xD0 bytes and holds the mage guild slot states and the
-/// spell research counter; it is the only place the research state can be read from.
-/// Source: spike, 2026-09-09, found by diffing memory across a research roll.
+/// `SpellDisabledMask`. The record is 0xD0 bytes and holds the mage guild slot states and a
+/// pointer to the spells the guild has been offered; it is the only place the research state
+/// can be read from.
+/// Source: spike, 2026-09-09, found by diffing memory across a research roll; the offered set
+/// and what the counts at +0xA4 / +0xA8 really are from reading HotA.dll, 2026-10-24.
 inline constexpr std::size_t kTownHotaExtension = 0xD4;
 inline constexpr std::size_t kHotaExtensionSize = 0xD0;
 
-/// INT32[5][6] slot states inside the extension record: 0 the tier has no such slot,
-/// 1 an ordinary spell, 2 a spell being researched.
+/// Pointer to UINT32[3], one bit per spell the guild has held or been offered. HotA marks the
+/// guild's own spells when it builds the record, the Library's when it is built, and every
+/// spell its research draws, which is
+/// what the rolls are counted from: the game keeps no count per slot. The words at +0xA4 and
+/// +0xA8 are not one either - they count the rolls of tiers 4 and 5 only toward handing out
+/// Town Portal and Dimension Door, and drop to -1 once that spell turns up.
+inline constexpr std::size_t kHotaExtensionOfferedSpells = 0x0C;
+
+/// INT32[5][6] slot states inside the extension record: 1 an ordinary spell, 2 a spell being
+/// researched, 0 research kept in a real slot - or a slot the tier does not have.
 inline constexpr std::size_t kHotaExtensionSlotStates = 0x10;
 
-/// INT32 number of rolls made on the slot currently under research. Holds -1 once the
-/// streamer closes the research, so the count is only readable while research is open.
-inline constexpr std::size_t kHotaExtensionRollCount = 0xA4;
+/// The spell table HotA's research draws from, as a pointer: NH3API's `akSpellTraits` names
+/// the copy SoD keeps at 0x6854A0, which HotA leaves behind. Entries are `TSpellTraits`
+/// (0x88 bytes) and the spell level is the INT32 at +0x18.
+/// Source: HotA.dll's research, 2026-10-24.
+inline constexpr std::uintptr_t kSpellTablePointer = 0x687FA8;
+inline constexpr std::size_t kSpellSize = 0x88;
+inline constexpr std::size_t kSpellLevel = 0x18;
 
 /// The town screen manager. NH3API exposes the adventure and combat manager globals but not
 /// this one; the plugin needs it only to tell the town screen apart from the rest.
